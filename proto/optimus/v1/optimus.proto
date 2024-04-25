@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package optimus.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/binarymatt/optimus/gen/optimus/v1;optimusv1";
+
+service OptimusService {
+  // Store saves an event(s) onto the processing pipeline
+  rpc Store(StoreRequest) returns (StoreResponse) {}
+}
+
+message StoreRequest {
+  // key is an idempotency key
+  string key = 1;
+
+  repeated google.protobuf.Struct events = 2 [(buf.validate.field).repeated = {min_items: 1}];
+}
+
+message StoreResponse {}
