@@ -7,16 +7,23 @@ import "google/protobuf/struct.proto";
 
 option go_package = "github.com/binarymatt/optimus/gen/optimus/v1;optimusv1";
 
-service OptimusService {
+service OptimusLogService {
   // Store saves an event(s) onto the processing pipeline
-  rpc Store(StoreRequest) returns (StoreResponse) {}
+  rpc StoreLogEvent(StoreLogEventRequest) returns (StoreLogEventResponse) {}
 }
 
-message StoreRequest {
+message StoreLogEventRequest {
   // key is an idempotency key
   string key = 1;
 
-  repeated google.protobuf.Struct events = 2 [(buf.validate.field).repeated = {min_items: 1}];
+  repeated LogEvent events = 2 [(buf.validate.field).repeated = {min_items: 1}];
 }
 
-message StoreResponse {}
+message LogEvent {
+  string id = 1;
+  google.protobuf.Struct data = 2 [(buf.validate.field).required = true];
+  string source = 3;
+  repeated string upstreams = 4;
+}
+
+message StoreLogEventResponse {}

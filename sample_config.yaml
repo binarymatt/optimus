@@ -1,0 +1,19 @@
+---
+data_dir: "/tmp/data"
+metrics_enabled: true
+listen_address: ":8080"
+console: true
+log_level: debug
+inputs:
+  httpInput:
+    kind: http
+destinations:
+  sampleout:
+    kind: stdout
+    subscriptions:
+      - httpInput
+  samplefile:
+    kind: file
+    path: "test.ndjson"
+    subscriptions:
+      - httpInput
