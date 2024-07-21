@@ -14,7 +14,7 @@ var (
 
 type ChannelInput struct {
 	broker *pubsub.Broker
-	input  <-chan *optimusv1.LogEvent
+	Input  <-chan *optimusv1.LogEvent
 }
 
 func (ci *ChannelInput) Setup(ctx context.Context, broker *pubsub.Broker) error {
@@ -27,7 +27,7 @@ func (ci *ChannelInput) Process(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return nil
-		case e := <-ci.input:
+		case e := <-ci.Input:
 			ci.broker.Broadcast(e)
 		}
 	}

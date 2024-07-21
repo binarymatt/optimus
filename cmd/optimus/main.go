@@ -13,6 +13,7 @@ import (
 
 	"github.com/binarymatt/optimus"
 	"github.com/binarymatt/optimus/config"
+	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
 )
 
 func main() {
@@ -109,5 +110,7 @@ func Run(cctx *cli.Context) error {
 		return err
 	}
 	o := optimus.New(cfg)
+	c := make(<-chan *optimusv1.LogEvent)
+	o.AddChannelInput("testing", c)
 	return o.Run(ctx)
 }

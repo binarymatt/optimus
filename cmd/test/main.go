@@ -1,118 +1,74 @@
 package main
 
 import (
-	"bufio"
 	"context"
-	"errors"
-	"io"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 
-	"github.com/fsnotify/fsnotify"
 	"golang.org/x/sync/errgroup"
-)
-var (
-	global *tracker
-	goRun = func (){
-		global = &tracker{
-			mux: sync.Mutex{},
-			paths: make(map[string]pathInfo)
-		}
-	}
+	"google.golang.org/protobuf/types/known/structpb"
+	"gopkg.in/yaml.v3"
+
+	"github.com/binarymatt/optimus"
+	"github.com/binarymatt/optimus/config"
+	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
 )
 
-type pathInfo struct {
-	isDir  bool
-	path   string
-	events chan fsnotify.Event
-}
-
-type tracker struct {
-	// files map[string]
-	mux sync.Mutex
-	paths map[string]pathInfo
-}
-
-
-
-
-type SeekInfo struct {
-	Offset int64
-	Whence int
-}
-type tailer struct {
-	pos      int64
-	filename string
-	file     *os.File
-	reader   *bufio.Reader
-	// watcher  *fsnotify.Watcher
-	Events chan fsnotify.Event
-	lock   sync.Mutex
-}
-
-func NewTail(filename string) (*tailer, error) {
-}
-func (t *tailer) tailFile() {}
-func (t *tailer) readline() (string, error) {
-	t.lock.Lock()
-	data, err := t.reader.ReadString('\n')
-	return data, err
-}
-func (t *tailer) updatePosition(additionalPosData int64) error {
-	t.pos = t.pos + additionalPosData
-	_, err := t.file.Seek(t.pos, io.SeekStart)
+func loadConfig(filePath string) (*config.Config, error) {
+	data, err := os.ReadFile(filePath)
 	if err != nil {
-		return err
-	}
-	t.reader.Reset(t.file)
-	return nil
-}
-func (t *tailer) wait() error {
-	select {
-	case event, ok := <-t.Events:
-		if !ok {
-			return ErrChannelClosed
-		}
-
-	}
-}
-func (t *tailer) process() {
-	for {
-		line, err := t.readline()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				// wait for changes
-				continue
-			}
-			return
-		}
-	}
-}
-
-func NewTail(path string) (*tailer, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		slog.Error("could not open file for read", "error", err)
 		return nil, err
 	}
-	w, err := fsnotify.NewWatcher()
-	if err != nil {
-		slog.Error("could not create watcher", "error", err)
-		return nil, err
-	}
-	w.Add(path)
-	return &tailer{
-		filename: path,
-		file:     f,
-		reader:   bufio.NewReader(f),
-		watcher:  w,
-	}, nil
+	cfg := config.Config{}
+	err = yaml.Unmarshal(data, &cfg)
+	return &cfg, err
 }
-
 func main() {
+	ctx, cancel := signal.NotifyContext(
+		context.Background(),
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT,
+		syscall.SIGKILL,
+	)
+	defer cancel()
+	eg, ctx := errgroup.WithContext(ctx)
+
+	cfg, err := loadConfig("sample_config.yaml")
+	if err != nil {
+		return
+	}
+	o := optimus.New(cfg)
+	c := make(chan *optimusv1.LogEvent)
+	o.AddChannelInput("testing", c)
+	eg.Go(func() error {
+		return o.Run(ctx)
+	})
+	eg.Go(func() error {
+		for i := range 10 {
+			data, err := structpb.NewStruct(map[string]interface{}{"test": "this", "id": i})
+			if err != nil {
+				return err
+			}
+			c <- &optimusv1.LogEvent{
+				Id:   fmt.Sprintf("testing%d", i),
+				Data: data,
+			}
+		}
+		slog.Warn("done adding to channel")
+		return nil
+	})
+	if err := eg.Wait(); err != nil {
+		slog.Error("errorgroup wait error", "error", err)
+	}
+	slog.Warn("done")
+}
+
+/*
+func mainOld() {
 	slog.Info("starting")
 	path := "./tmp"
 
@@ -179,7 +135,4 @@ func main() {
 	slog.Error("read from pos", "data", data, "error", err)
 
 }
-
-func openFile(path string) {
-	// return os.Open(path)
-}
+*/

@@ -9,6 +9,7 @@ require (
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/hashicorp/go-bexpr v0.1.14
 	github.com/lmittmann/tint v1.0.4
+	github.com/oklog/ulid/v2 v2.1.0
 	github.com/prometheus/client_golang v1.19.0
 	github.com/urfave/cli/v2 v2.27.1
 	go.opentelemetry.io/otel/trace v1.26.0

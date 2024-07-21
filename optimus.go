@@ -13,38 +13,55 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/binarymatt/optimus/config"
+	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
+	"github.com/binarymatt/optimus/internal/input"
 	"github.com/binarymatt/optimus/internal/pubsub"
 )
 
 type Optimus struct {
-	cfg *config.Config
+	cfg     *config.Config
+	parents map[string]*pubsub.Broker
 }
 
 func New(cfg *config.Config) *Optimus {
 	o := &Optimus{
-		cfg: cfg,
+		cfg:     cfg,
+		parents: make(map[string]*pubsub.Broker),
 	}
 	return o
 }
-
-func (o *Optimus) Run(ctx context.Context) error {
-	slog.Info("starting optimus runtime")
+func (o *Optimus) AddChannelInput(name string, in <-chan *optimusv1.LogEvent) {
+	o.cfg.Inputs[name] = &input.Input{
+		ID:   name,
+		Kind: "channel",
+		Internal: &input.ChannelInput{
+			Input: in,
+		},
+	}
+}
+func (o *Optimus) Setup() error {
 	cfg := o.cfg
-	// read config
-	eg, ctx := errgroup.WithContext(ctx)
-	// input map
-	parents := map[string]*pubsub.Broker{}
+	// parents := map[string]*pubsub.Broker{}
 	slog.Debug("configuring inputs")
+	// input map
 	for key, input := range cfg.Inputs {
 		input.Init(key)
-		parents[key] = input.Broker
+		o.parents[key] = input.Broker
 	}
-
 	slog.Debug("configuring filters")
 	for key, filter := range cfg.Filters {
 		filter.Init(key)
-		parents[filter.ID] = filter.Broker
+		o.parents[filter.ID] = filter.Broker
 	}
+	return nil
+}
+func (o *Optimus) Run(ctx context.Context) error {
+	slog.Info("starting optimus runtime")
+	cfg := o.cfg
+	if err := o.Setup(); err != nil {
+		return err
+	}
+	eg, ctx := errgroup.WithContext(ctx)
 
 	slog.Debug("configuring and starting destinations")
 	for key, d := range cfg.Destinations {
@@ -56,9 +73,11 @@ func (o *Optimus) Run(ctx context.Context) error {
 		}
 		// setup subscriptions
 		for _, name := range destination.Subscriptions {
-			broker := parents[name]
-			slog.Debug("setting up destination parent", "name", name)
-			broker.AddSubscriber(destination.Subscriber)
+			broker, ok := o.parents[name]
+			if ok {
+				slog.Debug("setting up destination parent", "name", name)
+				broker.AddSubscriber(destination.Subscriber)
+			}
 		}
 		// start goroutine
 		eg.Go(func() error {
@@ -71,8 +90,10 @@ func (o *Optimus) Run(ctx context.Context) error {
 		filter := f
 		// setup Subscriptions
 		for _, name := range filter.Subscriptions {
-			broker := parents[name]
-			broker.AddSubscriber(filter.Subscriber)
+			broker, ok := o.parents[name]
+			if ok {
+				broker.AddSubscriber(filter.Subscriber)
+			}
 		}
 		//start goroutine
 		eg.Go(func() error {

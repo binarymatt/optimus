@@ -3,15 +3,20 @@ data_dir: "/tmp/data"
 metrics_enabled: true
 listen_address: ":8080"
 console: true
-log_level: debug
+log_level: info
 inputs:
+  fileInput:
+    kind: file
+    path: "./cmd/test/tmp"
   httpInput:
     kind: http
 destinations:
   sampleout:
     kind: stdout
     subscriptions:
+      - fileInput
       - httpInput
+      - testing
   samplefile:
     kind: file
     path: "test.ndjson"
