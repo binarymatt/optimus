@@ -130,13 +130,13 @@ func (o *Optimus) Run(ctx context.Context) error {
 				if err := server.Shutdown(timeoutCtx); err != nil {
 					slog.Error("error shutting service", "error", err)
 				}
-				slog.Warn("done shutting down api server")
+				slog.Debug("done shutting down api server")
 			}()
 
-			slog.Info("api server starting")
+			slog.Debug("api server starting")
 			if err := server.ListenAndServe(); err != nil {
 				if errors.Is(err, http.ErrServerClosed) {
-					slog.Warn("server shutdown")
+					slog.Debug("server shutdown")
 					return nil
 				}
 				slog.Error("got error during listen and serve", "error", err)
@@ -145,6 +145,6 @@ func (o *Optimus) Run(ctx context.Context) error {
 			return nil
 		})
 	}
-	slog.Info("everything starting, running...")
+	slog.Info("all components started, running...")
 	return eg.Wait()
 }

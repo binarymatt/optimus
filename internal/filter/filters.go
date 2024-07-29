@@ -73,7 +73,7 @@ func (f *Filter) Process(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			slog.Info("context is done, shutting down destination event loop")
+			slog.Info("context is done, shutting down filter event loop")
 			return nil
 		case event := <-f.inputs:
 			newEvent, err := f.process(ctx, event)

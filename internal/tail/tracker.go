@@ -142,6 +142,7 @@ func (p *PathInfo) Run() {
 func (p *PathInfo) ReadLines() ([]string, error) {
 	var lines []string
 	pos := p.pos
+	slog.Debug("starting to read at position", "pos", pos)
 	for {
 		line, err := p.reader.ReadString('\n')
 		if err != nil {
@@ -160,12 +161,12 @@ func (p *PathInfo) ReadLines() ([]string, error) {
 	}
 	p.pos = pos
 	p.reader.Reset(p.file)
-	slog.Info("read lines", "count", len(lines), "file", p.path)
+	slog.Debug("read lines", "count", len(lines), "file", p.path)
 	return lines, nil
 }
 
 func (p *PathInfo) ReadUntilEOF() {
-	slog.Info("reading from file", "name", p.path)
+	slog.Debug("reading from file", "name", p.path)
 	lines, err := p.ReadLines()
 	if err != nil {
 		return
@@ -271,11 +272,11 @@ func (t *TailTracker) processEvent(event fsnotify.Event) {
 	}
 }
 
-// TODO: handle directories
+// AddPath adds the given path to the set of watched paths. If the path is a directory,
+// files included in that directory will be added to the watcher as they are updated/created.
 func (t *TailTracker) AddPath(path string, processor LineProcessor) (*PathInfo, error) {
-	slog.Info("adding path to tracker", "path", path)
+	slog.Debug("adding path to tracker", "path", path)
 
-	// TODO: check for existing files in parent.
 	name := filepath.Clean(path)
 	info, err := NewInfo(path, processor)
 	if err != nil {

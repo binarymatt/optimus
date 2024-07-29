@@ -63,7 +63,7 @@ func (d *Destination) Process(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			slog.Info("context is done, shutting down destination event loop")
+			slog.Info("context is done, shutting down destination event loop", "id", d.ID, "kind", d.Kind)
 			return
 		case event := <-d.inputs:
 			slog.Debug("delivering event", "event", event, "deliverer", d.process)

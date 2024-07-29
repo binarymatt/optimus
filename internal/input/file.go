@@ -27,7 +27,7 @@ func (fi *FileInput) SetID(id string) {
 
 func (fi *FileInput) Setup(ctx context.Context, broker *pubsub.Broker) error {
 	pathName := filepath.Clean(fi.Path)
-	slog.Info("setting up file input", "path", pathName)
+	slog.Debug("setting up file input", "path", pathName)
 	t, err := tail.NewTracker()
 	if err != nil {
 		return err

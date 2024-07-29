@@ -58,13 +58,13 @@ func main() {
 				Data: data,
 			}
 		}
-		slog.Warn("done adding to channel")
+		slog.Info("done adding records to channel")
 		return nil
 	})
 	if err := eg.Wait(); err != nil {
 		slog.Error("errorgroup wait error", "error", err)
 	}
-	slog.Warn("done")
+	slog.Warn("done with test command")
 }
 
 /*
