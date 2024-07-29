@@ -3,7 +3,6 @@ package input
 import (
 	"context"
 	"errors"
-	"log/slog"
 
 	"gopkg.in/yaml.v3"
 
@@ -18,6 +17,7 @@ var (
 type InputSpecific interface {
 	Setup(context.Context, *pubsub.Broker) error
 	Process(context.Context) error
+	SetID(id string)
 }
 type Ingester = func(ctx context.Context, event *optimusv1.LogEvent) error
 
@@ -29,13 +29,14 @@ type Input struct {
 	// 	ingester Ingester
 }
 
-func (i *Input) Process(ctx context.Context) error {
-	return i.Internal.Process(ctx)
+func (i *Input) Process(ctx context.Context) (err error) {
+	err = i.Internal.Process(ctx)
+	return
 }
 
 func (in *Input) Init(id string) {
 	in.ID = id
-	slog.Debug("initializing input", "id", in.ID)
+	in.Internal.SetID(id)
 	in.Broker = pubsub.NewBroker(in.ID)
 }
 

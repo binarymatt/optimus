@@ -10,10 +10,12 @@ import (
 
 	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
 	"github.com/binarymatt/optimus/gen/optimus/v1/optimusv1connect"
+	"github.com/binarymatt/optimus/internal/metrics"
 	"github.com/binarymatt/optimus/internal/pubsub"
 )
 
 type Service struct {
+	name   string
 	Broker *pubsub.Broker
 }
 
@@ -36,12 +38,14 @@ func (s *Service) StoreLogEvent(ctx context.Context, req *connect.Request[optimu
 	for _, event := range req.Msg.GetEvents() {
 		slog.Debug("broadcasting event", "event", event)
 		s.Broker.Broadcast(event)
+		metrics.RecordProcessedRecord("http_input", s.name)
 	}
 	return connect.NewResponse(&optimusv1.StoreLogEventResponse{}), nil
 }
 
-func New(broker *pubsub.Broker) optimusv1connect.OptimusLogServiceHandler {
+func New(broker *pubsub.Broker, name string) optimusv1connect.OptimusLogServiceHandler {
 	return &Service{
+		name:   name,
 		Broker: broker,
 	}
 }

@@ -46,19 +46,6 @@ var (
 		"endpoint",
 		"status_code",
 	})
-
-	consumerLag = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "consumer_lag",
-	}, []string{
-		"topic",
-		"group",
-		"consumer",
-	})
-	visible_records = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "visible_records",
-	}, []string{
-		"topic",
-	})
 )
 
 func MetricsInterceptor() connect.UnaryInterceptorFunc {

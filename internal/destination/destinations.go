@@ -2,9 +2,11 @@ package destination
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
+	"github.com/binarymatt/optimus/internal/metrics"
 	"github.com/binarymatt/optimus/internal/pubsub"
 )
 
@@ -65,9 +67,11 @@ func (d *Destination) Process(ctx context.Context) {
 			return
 		case event := <-d.inputs:
 			slog.Debug("delivering event", "event", event, "deliverer", d.process)
-			if err := d.process(ctx, event); err != nil {
+			err := d.process(ctx, event)
+			if err != nil {
 				slog.Error("error delivering record", "error", err)
 			}
+			metrics.RecordProcessedRecord(fmt.Sprintf("%s_destination", d.Kind), d.ID)
 		}
 	}
 

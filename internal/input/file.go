@@ -10,13 +10,19 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 
 	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
+	"github.com/binarymatt/optimus/internal/metrics"
 	"github.com/binarymatt/optimus/internal/pubsub"
 	"github.com/binarymatt/optimus/internal/tail"
 )
 
 type FileInput struct {
+	ID      string
 	Path    string `yaml:"path"`
 	tracker *tail.TailTracker
+}
+
+func (fi *FileInput) SetID(id string) {
+	fi.ID = id
 }
 
 func (fi *FileInput) Setup(ctx context.Context, broker *pubsub.Broker) error {
@@ -44,6 +50,7 @@ func (fi *FileInput) Setup(ctx context.Context, broker *pubsub.Broker) error {
 			Source: path,
 			Data:   data,
 		}
+		metrics.RecordProcessedRecord("file_input", fi.ID)
 		broker.Broadcast(event)
 		return nil
 	})

@@ -35,6 +35,7 @@ func (o *Optimus) AddChannelInput(name string, in <-chan *optimusv1.LogEvent) {
 		ID:   name,
 		Kind: "channel",
 		Internal: &input.ChannelInput{
+			ID:    name,
 			Input: in,
 		},
 	}
