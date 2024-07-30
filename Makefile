@@ -6,4 +6,8 @@ lint:
 	@golangci-lint run
 .PHONY: test
 test:
-	@gotestsum -- -coverprofile=cover.out github.com/binarymatt/optimus
+	@gotestsum
+
+.PHONY: test-with-coverage
+test-with-coverage:
+	@gotestsum -- -coverprofile=cover.out ./...

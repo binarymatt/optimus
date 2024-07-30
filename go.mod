@@ -11,6 +11,7 @@ require (
 	github.com/lmittmann/tint v1.0.4
 	github.com/oklog/ulid/v2 v2.1.0
 	github.com/prometheus/client_golang v1.19.0
+	github.com/shoenig/test v1.8.2
 	github.com/urfave/cli/v2 v2.27.1
 	go.opentelemetry.io/otel/trace v1.26.0
 	golang.org/x/net v0.24.0
@@ -29,6 +30,7 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/cel-go v0.20.1 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/mitchellh/pointerstructure v1.2.1 // indirect
 	github.com/prometheus/client_model v0.5.0 // indirect
