@@ -3,10 +3,10 @@ package input
 import (
 	"context"
 	"errors"
+	"log/slog"
 
 	"gopkg.in/yaml.v3"
 
-	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
 	"github.com/binarymatt/optimus/internal/pubsub"
 )
 
@@ -14,30 +14,27 @@ var (
 	ErrInvalidInput = errors.New("invalid input config for kind")
 )
 
-type InputSpecific interface {
-	Setup(context.Context, *pubsub.Broker) error
-	Process(context.Context) error
-	SetID(id string)
-}
-type Ingester = func(ctx context.Context, event *optimusv1.LogEvent) error
+type Processor = func(context.Context) error
+type InternalSetup = func(id string, broker *pubsub.Broker) error
 
 type Input struct {
-	ID       string
-	Kind     string `yaml:"kind"`
-	Internal InputSpecific
-	Broker   *pubsub.Broker
-	// 	ingester Ingester
+	ID        string
+	Kind      string `yaml:"kind"`
+	Setup     InternalSetup
+	Processor Processor
+	Broker    *pubsub.Broker
 }
 
 func (i *Input) Process(ctx context.Context) (err error) {
-	err = i.Internal.Process(ctx)
-	return
+	return i.Processor(ctx)
 }
 
 func (in *Input) Init(id string) {
 	in.ID = id
-	in.Internal.SetID(id)
 	in.Broker = pubsub.NewBroker(in.ID)
+	if err := in.Setup(in.ID, in.Broker); err != nil {
+		slog.Error("could not setup input", "error", err)
+	}
 }
 
 func (in *Input) UnmarshalYAML(n *yaml.Node) error {
@@ -59,13 +56,15 @@ func (in *Input) UnmarshalYAML(n *yaml.Node) error {
 		if err := n.Decode(&finput); err != nil {
 			return err
 		}
-		in.Internal = &finput
+		in.Setup = finput.Setup
+		in.Processor = finput.Process
 	case "http":
 		var hin HTTPInput
 		if err := n.Decode(&hin); err != nil {
 			return err
 		}
-		in.Internal = &hin
+		in.Setup = hin.Setup
+		in.Processor = hin.Process
 	}
 	return nil
 }

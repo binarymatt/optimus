@@ -24,6 +24,7 @@ type Optimus struct {
 }
 
 func New(cfg *config.Config) *Optimus {
+	cfg.Init()
 	o := &Optimus{
 		cfg:     cfg,
 		parents: make(map[string]*pubsub.Broker),
@@ -31,13 +32,14 @@ func New(cfg *config.Config) *Optimus {
 	return o
 }
 func (o *Optimus) AddChannelInput(name string, in <-chan *optimusv1.LogEvent) {
+	channelInput := &input.ChannelInput{
+		Input: in,
+	}
 	o.cfg.Inputs[name] = &input.Input{
-		ID:   name,
-		Kind: "channel",
-		Internal: &input.ChannelInput{
-			ID:    name,
-			Input: in,
-		},
+		ID:        name,
+		Kind:      "channel",
+		Processor: channelInput.Process,
+		Setup:     channelInput.Setup,
 	}
 }
 func (o *Optimus) Setup() error {
@@ -46,6 +48,9 @@ func (o *Optimus) Setup() error {
 	slog.Debug("configuring inputs")
 	// input map
 	for key, input := range cfg.Inputs {
+		if input.Kind == "http" {
+			o.cfg.HttpInputEnabled = true
+		}
 		input.Init(key)
 		o.parents[key] = input.Broker
 	}
@@ -105,18 +110,16 @@ func (o *Optimus) Run(ctx context.Context) error {
 	slog.Debug("starting inputs")
 	for _, i := range cfg.Inputs {
 		input := i
-		if err := input.Internal.Setup(ctx, input.Broker); err != nil {
-			slog.Error("could not setup input", "input", input.ID, "kind", input.Kind)
-			continue
-		}
 		eg.Go(func() error {
 			return input.Process(ctx)
 		})
 	}
 
-	if o.cfg.ListenAddress != "" {
+	if o.cfg.HttpInputEnabled || o.cfg.MetricsEnabled {
 		eg.Go(func() error {
-			http.Handle("/metrics", promhttp.Handler())
+			if o.cfg.MetricsEnabled {
+				http.Handle("/metrics", promhttp.Handler())
+			}
 			server := http.Server{
 				Addr:    o.cfg.ListenAddress,
 				Handler: h2c.NewHandler(http.DefaultServeMux, &http2.Server{}),

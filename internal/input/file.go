@@ -21,11 +21,7 @@ type FileInput struct {
 	tracker *tail.TailTracker
 }
 
-func (fi *FileInput) SetID(id string) {
-	fi.ID = id
-}
-
-func (fi *FileInput) Setup(ctx context.Context, broker *pubsub.Broker) error {
+func (fi *FileInput) Setup(id string, broker *pubsub.Broker) error {
 	pathName := filepath.Clean(fi.Path)
 	slog.Debug("setting up file input", "path", pathName)
 	t, err := tail.NewTracker()
@@ -34,7 +30,7 @@ func (fi *FileInput) Setup(ctx context.Context, broker *pubsub.Broker) error {
 	}
 	fi.tracker = t
 	_, err = fi.tracker.AddPath(fi.Path, func(path, line string) error {
-		id := ulid.Make()
+		uid := ulid.Make()
 		var log map[string]interface{}
 		if err := json.Unmarshal([]byte(line), &log); err != nil {
 			slog.Error("could not unmarshal line", "error", err)
@@ -46,11 +42,11 @@ func (fi *FileInput) Setup(ctx context.Context, broker *pubsub.Broker) error {
 		}
 
 		event := &optimusv1.LogEvent{
-			Id:     id.String(),
+			Id:     uid.String(),
 			Source: path,
 			Data:   data,
 		}
-		metrics.RecordProcessedRecord("file_input", fi.ID)
+		metrics.RecordProcessedRecord("file_input", id)
 		broker.Broadcast(event)
 		return nil
 	})
