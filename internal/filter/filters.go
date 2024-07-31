@@ -13,7 +13,7 @@ import (
 
 type FilterFunc = func(context.Context, *optimusv1.LogEvent) (*optimusv1.LogEvent, error)
 type Filter struct {
-	ID            string
+	id            string
 	Broker        *pubsub.Broker
 	Subscriber    *pubsub.Subscriber
 	inputs        chan *optimusv1.LogEvent
@@ -24,15 +24,17 @@ type Filter struct {
 }
 
 func (f *Filter) Init(id string) {
-	f.ID = id
+	f.id = id
 	if f.BufferSize == 0 {
 		f.BufferSize = 5
 	}
-	f.Broker = pubsub.NewBroker(f.ID)
+	f.Broker = pubsub.NewBroker(f.id)
 	f.inputs = make(chan *optimusv1.LogEvent, f.BufferSize)
-	f.Subscriber = pubsub.NewSubscriber(f.ID, f.inputs)
+	f.Subscriber = pubsub.NewSubscriber(f.id, f.inputs)
 }
-
+func (f *Filter) SetupInternal() error {
+	return nil
+}
 func (f *Filter) UnmarshalYAML(n *yaml.Node) error {
 	//type I Input
 	//slog.Info("inside", "node", n, "input", i)
@@ -70,6 +72,7 @@ func (f *Filter) UnmarshalYAML(n *yaml.Node) error {
 }
 
 func (f *Filter) Process(ctx context.Context) error {
+	slog.Debug("starting filter loop", "id", f.id, "type", f.Kind)
 	for {
 		select {
 		case <-ctx.Done():

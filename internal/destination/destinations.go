@@ -16,14 +16,14 @@ type InternalDestination interface {
 	Deliver(context.Context, *optimusv1.LogEvent) error
 }
 type Destination struct {
-	id            string
-	Kind          string   `yaml:"kind"`
-	BufferSize    int      `yaml:"buffer_size"`
-	Subscriptions []string `yaml:"subscriptions"`
-	Subscriber    *pubsub.Subscriber
-	inputs        chan *optimusv1.LogEvent
-	process       Deliverer
-	internal      map[string]any `yaml:",inline"`
+	id             string
+	Kind           string   `yaml:"kind"`
+	BufferSize     int      `yaml:"buffer_size"`
+	Subscriptions  []string `yaml:"subscriptions"`
+	Subscriber     *pubsub.Subscriber
+	inputs         chan *optimusv1.LogEvent
+	process        Deliverer
+	InternalConfig map[string]any `yaml:",inline"`
 }
 
 func (d *Destination) SetupInternal() error {
@@ -31,11 +31,12 @@ func (d *Destination) SetupInternal() error {
 	switch d.Kind {
 	case "stdout":
 		internal = &StdOutDestination{}
-	case "http":
+	//case "http":
+	// 	internal = &HttpDestination{}
 	case "file":
 		internal = &FileDestination{}
 	}
-	if err := internal.Setup(d.internal); err != nil {
+	if err := internal.Setup(d.InternalConfig); err != nil {
 		return err
 	}
 	d.process = internal.Deliver
@@ -43,7 +44,7 @@ func (d *Destination) SetupInternal() error {
 }
 func (d *Destination) Init(id string) error {
 	d.id = id
-	slog.Debug("initializaing destination", "id", d.id, "subscriptions", d.Subscriptions, "internal", d.internal, "kind", d.Kind)
+	slog.Debug("initializaing destination", "id", d.id, "subscriptions", d.Subscriptions, "internal", d.InternalConfig, "kind", d.Kind)
 	if err := d.SetupInternal(); err != nil {
 		return err
 	}

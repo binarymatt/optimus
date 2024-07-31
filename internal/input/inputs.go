@@ -16,7 +16,10 @@ var (
 
 type Processor = func(context.Context) error
 type InternalSetup = func(id string, broker *pubsub.Broker) error
-
+type InputProcessor interface {
+	Setup(id string, broker *pubsub.Broker) error
+	Process(context.Context) error
+}
 type Input struct {
 	ID        string
 	Kind      string `yaml:"kind"`
@@ -36,7 +39,10 @@ func (in *Input) Init(id string) {
 		slog.Error("could not setup input", "error", err)
 	}
 }
-
+func (in *Input) SetupInternal(internal InputProcessor) {
+	in.Processor = internal.Process
+	in.Setup = internal.Setup
+}
 func (in *Input) UnmarshalYAML(n *yaml.Node) error {
 	//type I Input
 	//slog.Info("inside", "node", n, "input", i)
@@ -50,21 +56,25 @@ func (in *Input) UnmarshalYAML(n *yaml.Node) error {
 			in.Kind = value.Value
 		}
 	}
+	var internal InputProcessor
 	switch in.Kind {
 	case "file":
 		var finput FileInput
 		if err := n.Decode(&finput); err != nil {
 			return err
 		}
-		in.Setup = finput.Setup
-		in.Processor = finput.Process
+		internal = &finput
 	case "http":
 		var hin HTTPInput
 		if err := n.Decode(&hin); err != nil {
 			return err
 		}
-		in.Setup = hin.Setup
-		in.Processor = hin.Process
+		internal = &hin
+
 	}
+	if internal == nil {
+		return errors.New("did not have an internal processor")
+	}
+	in.SetupInternal(internal)
 	return nil
 }

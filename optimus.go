@@ -23,13 +23,16 @@ type Optimus struct {
 	parents map[string]*pubsub.Broker
 }
 
-func New(cfg *config.Config) *Optimus {
+func New(cfg *config.Config) (*Optimus, error) {
 	cfg.Init()
 	o := &Optimus{
 		cfg:     cfg,
 		parents: make(map[string]*pubsub.Broker),
 	}
-	return o
+	if err := o.Setup(); err != nil {
+		return nil, err
+	}
+	return o, nil
 }
 func (o *Optimus) AddChannelInput(name string, in <-chan *optimusv1.LogEvent) {
 	channelInput := &input.ChannelInput{
@@ -59,23 +62,26 @@ func (o *Optimus) Setup() error {
 		filter.Init(key)
 		o.parents[key] = filter.Broker
 	}
+	for key, destination := range cfg.Destinations {
+		if err := destination.Init(key); err != nil {
+			slog.Error("could not initialize destiantion", "id", key)
+			return err
+		}
+	}
 	return nil
 }
 func (o *Optimus) Run(ctx context.Context) error {
 	slog.Info("starting optimus runtime")
 	cfg := o.cfg
-	if err := o.Setup(); err != nil {
-		return err
-	}
+	//if err := o.Setup(); err != nil {
+	//	return err
+	//}
 	eg, ctx := errgroup.WithContext(ctx)
 
 	slog.Debug("configuring and starting destinations")
-	for key, d := range cfg.Destinations {
+	for _, d := range cfg.Destinations {
 		destination := d
 		// create destination channel
-		if err := destination.Init(key); err != nil {
-			return err
-		}
 		// setup subscriptions
 		for _, name := range destination.Subscriptions {
 			broker, ok := o.parents[name]
@@ -100,6 +106,7 @@ func (o *Optimus) Run(ctx context.Context) error {
 				broker.AddSubscriber(filter.Subscriber)
 			}
 		}
+		slog.Debug("starting filter go routine", "name", filter.Kind)
 		//start goroutine
 		eg.Go(func() error {
 			return filter.Process(ctx)
@@ -109,6 +116,7 @@ func (o *Optimus) Run(ctx context.Context) error {
 	slog.Debug("starting inputs")
 	for _, i := range cfg.Inputs {
 		input := i
+		slog.Debug("starting input goroutine", "name", i.ID)
 		eg.Go(func() error {
 			return input.Process(ctx)
 		})
@@ -116,6 +124,7 @@ func (o *Optimus) Run(ctx context.Context) error {
 
 	if o.cfg.HttpInputEnabled || o.cfg.MetricsEnabled {
 		eg.Go(func() error {
+			slog.Debug("setting up http server")
 			if o.cfg.MetricsEnabled {
 				http.Handle("/metrics", promhttp.Handler())
 			}

@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/lmittmann/tint"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/structpb"
 	"gopkg.in/yaml.v3"
@@ -27,6 +28,11 @@ func loadConfig(filePath string) (*config.Config, error) {
 	return &cfg, err
 }
 func main() {
+	logger := slog.New(tint.NewHandler(os.Stderr, &tint.Options{
+		Level:     slog.LevelDebug,
+		AddSource: true,
+	}))
+	slog.SetDefault(logger)
 	ctx, cancel := signal.NotifyContext(
 		context.Background(),
 		syscall.SIGINT,
@@ -36,12 +42,15 @@ func main() {
 	)
 	defer cancel()
 	eg, ctx := errgroup.WithContext(ctx)
-
+	slog.Warn("loading config")
 	cfg, err := loadConfig("sample_config.yaml")
 	if err != nil {
 		return
 	}
-	o := optimus.New(cfg)
+	o, err := optimus.New(cfg)
+	if err != nil {
+		return
+	}
 	c := make(chan *optimusv1.LogEvent)
 	o.AddChannelInput("testing", c)
 	eg.Go(func() error {

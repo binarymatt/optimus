@@ -9,6 +9,7 @@ import (
 type Config struct {
 	DataDir          string `yaml:"data_dir"` // used to store data about positions.
 	MetricsEnabled   bool   `yaml:"metrics_enabled"`
+	LogLevel         string `yaml:"log_level"`
 	HttpInputEnabled bool
 	ListenAddress    string                              `yaml:"listen_address"`
 	Inputs           map[string]*input.Input             `yaml:"inputs"`

@@ -3,7 +3,7 @@ data_dir: "/tmp/data"
 metrics_enabled: true
 listen_address: ":8080"
 console: true
-log_level: info
+log_level: debug
 inputs:
   fileInput:
     kind: file

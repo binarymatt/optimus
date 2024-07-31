@@ -3,6 +3,7 @@ package destination
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"os"
 
 	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
@@ -19,6 +20,7 @@ func (sd *StdOutDestination) Setup(cfg map[string]any) error {
 
 func (sd *StdOutDestination) Deliver(ctx context.Context, event *optimusv1.LogEvent) error {
 	if err := sd.encoder.Encode(event.Data.AsMap()); err != nil {
+		slog.Error("could not encode data to stdout", "error", err)
 		return err
 	}
 	return nil
