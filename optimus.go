@@ -57,7 +57,7 @@ func (o *Optimus) Setup() error {
 	slog.Debug("configuring filters")
 	for key, filter := range cfg.Filters {
 		filter.Init(key)
-		o.parents[filter.ID] = filter.Broker
+		o.parents[key] = filter.Broker
 	}
 	return nil
 }
@@ -72,9 +72,8 @@ func (o *Optimus) Run(ctx context.Context) error {
 	slog.Debug("configuring and starting destinations")
 	for key, d := range cfg.Destinations {
 		destination := d
-		destination.ID = key
 		// create destination channel
-		if err := destination.Init(); err != nil {
+		if err := destination.Init(key); err != nil {
 			return err
 		}
 		// setup subscriptions

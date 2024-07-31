@@ -16,15 +16,14 @@ type InternalDestination interface {
 	Deliver(context.Context, *optimusv1.LogEvent) error
 }
 type Destination struct {
-	ID            string `yaml:"id"`
-	Kind          string `yaml:"kind"`
-	BufferSize    int    `yaml:"buffer_size"`
-	Cfg           interface{}
+	id            string
+	Kind          string   `yaml:"kind"`
+	BufferSize    int      `yaml:"buffer_size"`
 	Subscriptions []string `yaml:"subscriptions"`
 	Subscriber    *pubsub.Subscriber
 	inputs        chan *optimusv1.LogEvent
 	process       Deliverer
-	Internal      map[string]any `yaml:",inline"`
+	internal      map[string]any `yaml:",inline"`
 }
 
 func (d *Destination) SetupInternal() error {
@@ -36,14 +35,15 @@ func (d *Destination) SetupInternal() error {
 	case "file":
 		internal = &FileDestination{}
 	}
-	if err := internal.Setup(d.Internal); err != nil {
+	if err := internal.Setup(d.internal); err != nil {
 		return err
 	}
 	d.process = internal.Deliver
 	return nil
 }
-func (d *Destination) Init() error {
-	slog.Debug("initializaing destination", "id", d.ID, "subscriptions", d.Subscriptions, "internal", d.Internal, "kind", d.Kind)
+func (d *Destination) Init(id string) error {
+	d.id = id
+	slog.Debug("initializaing destination", "id", d.id, "subscriptions", d.Subscriptions, "internal", d.internal, "kind", d.Kind)
 	if err := d.SetupInternal(); err != nil {
 		return err
 	}
@@ -54,7 +54,7 @@ func (d *Destination) Init() error {
 		d.inputs = make(chan *optimusv1.LogEvent, d.BufferSize)
 	}
 	if d.Subscriber == nil {
-		d.Subscriber = pubsub.NewSubscriber(d.ID, d.inputs)
+		d.Subscriber = pubsub.NewSubscriber(d.id, d.inputs)
 	}
 	return nil
 }
@@ -63,7 +63,7 @@ func (d *Destination) Process(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			slog.Info("context is done, shutting down destination event loop", "id", d.ID, "kind", d.Kind)
+			slog.Info("context is done, shutting down destination event loop", "id", d.id, "kind", d.Kind)
 			return
 		case event := <-d.inputs:
 			slog.Debug("delivering event", "event", event, "deliverer", d.process)
@@ -71,7 +71,7 @@ func (d *Destination) Process(ctx context.Context) {
 			if err != nil {
 				slog.Error("error delivering record", "error", err)
 			}
-			metrics.RecordProcessedRecord(fmt.Sprintf("%s_destination", d.Kind), d.ID)
+			metrics.RecordProcessedRecord(fmt.Sprintf("%s_destination", d.Kind), d.id)
 		}
 	}
 
