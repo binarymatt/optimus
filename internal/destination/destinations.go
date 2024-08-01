@@ -2,8 +2,11 @@ package destination
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+
+	"gopkg.in/yaml.v3"
 
 	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
 	"github.com/binarymatt/optimus/internal/metrics"
@@ -11,6 +14,7 @@ import (
 )
 
 type Deliverer = func(context.Context, *optimusv1.LogEvent) error
+type Initializer = func() error
 type InternalDestination interface {
 	Setup(map[string]any) error
 	Deliver(context.Context, *optimusv1.LogEvent) error
@@ -24,6 +28,45 @@ type Destination struct {
 	inputs         chan *optimusv1.LogEvent
 	process        Deliverer
 	InternalConfig map[string]any `yaml:",inline"`
+}
+
+func (d *Destination) UnmarshalYAML(n *yaml.Node) error {
+	for i := 0; i < len(n.Content)/2; i += 2 {
+		key := n.Content[i]
+		value := n.Content[i+1]
+		if key.Kind == yaml.ScalarNode && key.Value == "kind" {
+			if value.Kind != yaml.ScalarNode {
+				return errors.New("kind is not scalar")
+			}
+			d.Kind = value.Value
+		}
+	}
+	var internal InternalDestination
+	switch d.Kind {
+	case "stdout":
+		var std StdOutDestination
+		if err := n.Decode(&std); err != nil {
+			return err
+		}
+		internal = &std
+	case "http":
+		var hout HttpDestination
+		if err := n.Decode(&hout); err != nil {
+			return err
+		}
+		internal = &hout
+	case "file":
+		var fout FileDestination
+		if err := n.Decode(&fout); err != nil {
+			return err
+		}
+		internal = &fout
+	}
+	if internal == nil {
+		return errors.New("did not have an internal processor")
+	}
+	// in.WithInputProcessor(internal)
+	return nil
 }
 
 func (d *Destination) SetupInternal() error {

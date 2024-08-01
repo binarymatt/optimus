@@ -22,15 +22,15 @@ type Config struct {
 	Destinations     map[string]*destination.Destination `yaml:"destinations"`
 }
 
-func LoadFromYamlFile(path string) (*Config, error) {
+func LoadYamlFromFile(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	return LoadFromYaml(data)
+	return LoadYaml(data)
 }
 
-func LoadFromYaml(data []byte) (*Config, error) {
+func LoadYaml(data []byte) (*Config, error) {
 	cfg := Config{}
 	err := yaml.Unmarshal(data, &cfg)
 	return &cfg, err
