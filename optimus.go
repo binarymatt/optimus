@@ -13,8 +13,6 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/binarymatt/optimus/config"
-	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
-	"github.com/binarymatt/optimus/internal/input"
 	"github.com/binarymatt/optimus/internal/pubsub"
 )
 
@@ -29,23 +27,10 @@ func New(cfg *config.Config) (*Optimus, error) {
 		cfg:     cfg,
 		parents: make(map[string]*pubsub.Broker),
 	}
-	if err := o.Setup(); err != nil {
-		return nil, err
-	}
-	return o, nil
+	err := o.setup()
+	return o, err
 }
-func (o *Optimus) AddChannelInput(name string, in <-chan *optimusv1.LogEvent) {
-	channelInput := &input.ChannelInput{
-		Input: in,
-	}
-	o.cfg.Inputs[name] = &input.Input{
-		ID:        name,
-		Kind:      "channel",
-		Processor: channelInput.Process,
-		Setup:     channelInput.Setup,
-	}
-}
-func (o *Optimus) Setup() error {
+func (o *Optimus) setup() error {
 	cfg := o.cfg
 	// parents := map[string]*pubsub.Broker{}
 	slog.Debug("configuring inputs")

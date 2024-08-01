@@ -20,7 +20,7 @@ type ChannelInput struct {
 	Input  <-chan *optimusv1.LogEvent
 }
 
-func (ci *ChannelInput) Setup(id string, broker *pubsub.Broker) error {
+func (ci *ChannelInput) Initialize(id string, broker *pubsub.Broker) error {
 	ci.broker = broker
 	ci.id = id
 	return nil
@@ -32,9 +32,8 @@ func (ci *ChannelInput) Process(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case e := <-ci.Input:
-
-			metrics.RecordProcessedRecord(fmt.Sprintf("%s_input", "channel"), ci.id)
 			ci.broker.Broadcast(e)
+			metrics.RecordProcessedRecord(fmt.Sprintf("%s_input", "channel"), ci.id)
 		}
 	}
 }

@@ -21,7 +21,7 @@ type FileInput struct {
 	tracker *tail.TailTracker
 }
 
-func (fi *FileInput) Setup(id string, broker *pubsub.Broker) error {
+func (fi *FileInput) Initialize(id string, broker *pubsub.Broker) error {
 	pathName := filepath.Clean(fi.Path)
 	slog.Debug("setting up file input", "path", pathName)
 	t, err := tail.NewTracker()

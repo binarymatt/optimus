@@ -15,17 +15,17 @@ var (
 )
 
 type Processor = func(context.Context) error
-type InternalSetup = func(id string, broker *pubsub.Broker) error
+type Initializer = func(id string, broker *pubsub.Broker) error
 type InputProcessor interface {
-	Setup(id string, broker *pubsub.Broker) error
+	Initialize(id string, broker *pubsub.Broker) error
 	Process(context.Context) error
 }
 type Input struct {
-	ID        string
-	Kind      string `yaml:"kind"`
-	Setup     InternalSetup
-	Processor Processor
-	Broker    *pubsub.Broker
+	ID         string
+	Kind       string `yaml:"kind"`
+	Initialize Initializer
+	Processor  Processor
+	Broker     *pubsub.Broker
 }
 
 func (i *Input) Process(ctx context.Context) (err error) {
@@ -35,17 +35,15 @@ func (i *Input) Process(ctx context.Context) (err error) {
 func (in *Input) Init(id string) {
 	in.ID = id
 	in.Broker = pubsub.NewBroker(in.ID)
-	if err := in.Setup(in.ID, in.Broker); err != nil {
+	if err := in.Initialize(in.ID, in.Broker); err != nil {
 		slog.Error("could not setup input", "error", err)
 	}
 }
-func (in *Input) SetupInternal(internal InputProcessor) {
-	in.Processor = internal.Process
-	in.Setup = internal.Setup
+func (in *Input) WithInputProcessor(inputSpecific InputProcessor) {
+	in.Processor = inputSpecific.Process
+	in.Initialize = inputSpecific.Initialize
 }
 func (in *Input) UnmarshalYAML(n *yaml.Node) error {
-	//type I Input
-	//slog.Info("inside", "node", n, "input", i)
 	for i := 0; i < len(n.Content)/2; i += 2 {
 		key := n.Content[i]
 		value := n.Content[i+1]
@@ -75,6 +73,6 @@ func (in *Input) UnmarshalYAML(n *yaml.Node) error {
 	if internal == nil {
 		return errors.New("did not have an internal processor")
 	}
-	in.SetupInternal(internal)
+	in.WithInputProcessor(internal)
 	return nil
 }

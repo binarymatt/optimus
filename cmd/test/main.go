@@ -29,7 +29,7 @@ func loadConfig(filePath string) (*config.Config, error) {
 }
 func main() {
 	logger := slog.New(tint.NewHandler(os.Stderr, &tint.Options{
-		Level:     slog.LevelDebug,
+		Level:     slog.LevelInfo,
 		AddSource: true,
 	}))
 	slog.SetDefault(logger)
@@ -43,16 +43,16 @@ func main() {
 	defer cancel()
 	eg, ctx := errgroup.WithContext(ctx)
 	slog.Warn("loading config")
-	cfg, err := loadConfig("sample_config.yaml")
-	if err != nil {
-		return
-	}
-	o, err := optimus.New(cfg)
+	cfg, err := config.LoadFromYamlFile("sample_config.yaml")
 	if err != nil {
 		return
 	}
 	c := make(chan *optimusv1.LogEvent)
-	o.AddChannelInput("testing", c)
+	cfg.WithChannelInput("testing", c)
+	o, err := optimus.New(cfg)
+	if err != nil {
+		return
+	}
 	eg.Go(func() error {
 		return o.Run(ctx)
 	})

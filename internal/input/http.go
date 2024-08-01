@@ -21,7 +21,7 @@ type HTTPInput struct {
 func (hi *HTTPInput) SetID(id string) {
 	hi.ID = id
 }
-func (hi *HTTPInput) Setup(id string, broker *pubsub.Broker) error {
+func (hi *HTTPInput) Initialize(id string, broker *pubsub.Broker) error {
 	path, handler := optimusv1connect.NewOptimusLogServiceHandler(service.New(broker, id),
 		connect.WithInterceptors(
 			logging.NewInterceptor(),

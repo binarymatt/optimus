@@ -25,7 +25,7 @@ var (
 type LineProcessor = func(string, string) error
 
 func getPathPos(path string) (int64, error) {
-	slog.Debug("geting pos from file")
+	slog.Debug("geting pos from file", "path", path)
 	pos := int64(0)
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -79,7 +79,7 @@ func NewInfo(path string, processor LineProcessor) (*PathInfo, error) {
 		info.Events = make(chan fsnotify.Event)
 		pos, err := getPathPos(chkPath)
 		if err != nil {
-			slog.Error("could not get pos", "error", err, "is", errors.Is(err, os.ErrNotExist))
+			slog.Error("could not get pos", "error", err, "is", errors.Is(err, os.ErrNotExist), "path", chkPath)
 			return nil, err
 		}
 		info.pos = pos
