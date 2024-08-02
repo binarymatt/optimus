@@ -13,7 +13,7 @@ type StdOutDestination struct {
 	encoder *json.Encoder
 }
 
-func (sd *StdOutDestination) Setup(cfg map[string]any) error {
+func (sd *StdOutDestination) Setup() error {
 	sd.encoder = json.NewEncoder(os.Stdout)
 	return nil
 }

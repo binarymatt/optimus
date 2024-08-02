@@ -21,34 +21,23 @@ type HttpDestination struct {
 	endpoint string
 	method   string
 	client   *retryablehttp.Client
+	Timeout  int    `yaml:"timeout"`
+	Retries  int    `yaml:"retries"`
+	Endpoint string `yaml:"endpoint"`
+	Method   string `yaml:"http_method"`
 }
 
-func (h *HttpDestination) Setup(cfg map[string]any) error {
-	timeout := 0
-	retries := 0
-	method := "POST"
-	endpoint := ""
-	if val, ok := cfg["timeout"]; ok {
-		timeout = val.(int)
-	}
-	if val, ok := cfg["retries"]; ok {
-		retries = val.(int)
-	}
+func (h *HttpDestination) Setup() error {
 
-	if val, ok := cfg["method"]; ok {
-		method = val.(string)
-	}
-	if val, ok := cfg["endpoint"]; ok {
-		endpoint = val.(string)
-	}
-	if endpoint == "" {
+	if h.Endpoint == "" {
 		return ErrMissingEndpoint
 	}
 	c := retryablehttp.NewClient()
-	c.HTTPClient.Timeout = time.Duration(timeout) * time.Millisecond
-	c.RetryMax = retries
+	c.HTTPClient.Timeout = time.Duration(h.Timeout) * time.Millisecond
+	c.RetryMax = h.Retries
+
+	h.method = h.Method
 	h.client = c
-	h.method = method
 	return nil
 }
 func (h *HttpDestination) Deliver(ctx context.Context, event *optimusv1.LogEvent) error {

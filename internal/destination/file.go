@@ -22,14 +22,12 @@ var (
 	ErrMissingPath = errors.New("missing path for file destination")
 )
 
-func (f *FileDestination) Setup(cfg map[string]any) error {
-	slog.Debug("file setup", "cfg", cfg)
-	val, ok := cfg["path"]
-	if !ok {
-		slog.Error("could not setup file destination, missing path")
+func (f *FileDestination) Setup() error {
+	slog.Debug("file setup", "path", f.Path)
+	if f.Path == "" {
+
 		return ErrMissingPath
 	}
-	f.Path = val.(string)
 
 	openFile, err := os.OpenFile(f.Path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
