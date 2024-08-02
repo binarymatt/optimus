@@ -43,7 +43,7 @@ func main() {
 	defer cancel()
 	eg, ctx := errgroup.WithContext(ctx)
 	slog.Warn("loading config")
-	cfg, err := config.LoadFromYamlFile("sample_config.yaml")
+	cfg, err := config.LoadYamlFromFile("sample_config.yaml")
 	if err != nil {
 		return
 	}
