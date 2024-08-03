@@ -55,7 +55,14 @@ func (c *Config) WithChannelInput(name string, in <-chan *optimusv1.LogEvent) *C
 	return c
 }
 
-// NOTE update to include channel output implementation
 func (c *Config) WithChannelOutput(name string, out chan<- *optimusv1.LogEvent) *Config {
+	cd := &destination.ChannelDestination{
+		Output: out,
+	}
+	destination := &destination.Destination{
+		Kind: "channel",
+	}
+	destination.WithProcessor(cd)
+	c.Destinations[name] = destination
 	return c
 }

@@ -5,10 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/hashicorp/go-retryablehttp"
+	"github.com/mitchellh/pointerstructure"
 
 	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
 )
@@ -17,14 +19,18 @@ var (
 	ErrMissingEndpoint = errors.New("missing endpoint information")
 )
 
+type Header struct {
+	Key   string `yaml:"key"`
+	Value string `yaml:"value"`
+	Path  string `yaml:"path"`
+}
 type HttpDestination struct {
-	endpoint string
-	method   string
 	client   *retryablehttp.Client
-	Timeout  int    `yaml:"timeout"`
-	Retries  int    `yaml:"retries"`
-	Endpoint string `yaml:"endpoint"`
-	Method   string `yaml:"http_method"`
+	Timeout  int      `yaml:"timeout"`
+	Retries  int      `yaml:"retries"`
+	Endpoint string   `yaml:"endpoint"`
+	Method   string   `yaml:"http_method"`
+	Headers  []Header `yaml:"headers"`
 }
 
 func (h *HttpDestination) Setup() error {
@@ -36,7 +42,6 @@ func (h *HttpDestination) Setup() error {
 	c.HTTPClient.Timeout = time.Duration(h.Timeout) * time.Millisecond
 	c.RetryMax = h.Retries
 
-	h.method = h.Method
 	h.client = c
 	return nil
 }
@@ -45,11 +50,32 @@ func (h *HttpDestination) Deliver(ctx context.Context, event *optimusv1.LogEvent
 	if err != nil {
 		return err
 	}
-	req, err := retryablehttp.NewRequest(h.method, h.endpoint, bytes.NewBuffer(raw))
+	req, err := retryablehttp.NewRequest(h.Method, h.Endpoint, bytes.NewBuffer(raw))
 	if err != nil {
 		return err
 	}
+	h.AddHeaders(req, event)
+
 	resp, err := h.client.Do(req)
 	slog.Debug("http delivery done", "code", resp.StatusCode)
 	return err
+}
+
+func (h *HttpDestination) AddHeaders(req *retryablehttp.Request, event *optimusv1.LogEvent) {
+	for _, header := range h.Headers {
+		key := header.Key
+		val := header.Value
+		if header.Path != "" {
+			var err error
+			pval, err := pointerstructure.Get(event, header.Path)
+			if err != nil {
+				slog.Error("could not get header value via path", "error", err, "key", key)
+			}
+			if pval != "" {
+				val = fmt.Sprintf("%v", pval)
+			}
+		}
+		req.Header.Add(key, val)
+
+	}
 }

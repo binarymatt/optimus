@@ -12,17 +12,17 @@ var (
 )
 
 type ChannelDestination struct {
-	output chan<- *optimusv1.LogEvent
+	Output chan<- *optimusv1.LogEvent
 }
 
-func (cd *ChannelDestination) Setup(cfg map[string]any) error {
+func (cd *ChannelDestination) Setup() error {
 	return nil
 }
 
 func (cd *ChannelDestination) Deliver(ctx context.Context, event *optimusv1.LogEvent) error {
-	if cd.output == nil {
+	if cd.Output == nil {
 		return ErrMissingChannel
 	}
-	cd.output <- event
+	cd.Output <- event
 	return nil
 }
