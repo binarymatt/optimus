@@ -79,3 +79,7 @@ func (h *HttpDestination) AddHeaders(req *retryablehttp.Request, event *optimusv
 
 	}
 }
+
+func (h *HttpDestination) Close() error {
+	return nil
+}

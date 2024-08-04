@@ -48,3 +48,6 @@ func (f *FileDestination) Deliver(ctx context.Context, event *optimusv1.LogEvent
 	_, err = f.f.WriteString(string(raw) + "\n")
 	return err
 }
+func (f *FileDestination) Close() error {
+	return f.f.Close()
+}

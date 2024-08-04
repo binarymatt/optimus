@@ -15,9 +15,11 @@ import (
 
 type Deliverer = func(context.Context, *optimusv1.LogEvent) error
 type Initializer = func() error
+type Closer = func() error
 type InternalDestination interface {
 	Setup() error
 	Deliver(context.Context, *optimusv1.LogEvent) error
+	Close() error
 }
 type Destination struct {
 	id            string
@@ -28,6 +30,7 @@ type Destination struct {
 	inputs        chan *optimusv1.LogEvent
 	process       Deliverer
 	initialize    Initializer
+	closer        Closer
 	// InternalConfig map[string]any `yaml:",inline"`
 }
 
@@ -35,6 +38,7 @@ func (d *Destination) WithProcessor(internal InternalDestination) {
 	slog.Info("setting up processor", "id", d.id, "kind", d.Kind)
 	d.process = internal.Deliver
 	d.initialize = internal.Setup
+	d.closer = internal.Close
 }
 func (d *Destination) UnmarshalYAML(n *yaml.Node) error {
 	/*
@@ -102,6 +106,11 @@ func (d *Destination) Init(id string) error {
 }
 
 func (d *Destination) Process(ctx context.Context) {
+	defer func() {
+		if err := d.closer(); err != nil {
+			slog.ErrorContext(ctx, "close destination error", "error", err, "id", d.id, "kind", d.Kind)
+		}
+	}()
 	for {
 		select {
 		case <-ctx.Done():

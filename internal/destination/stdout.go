@@ -33,3 +33,6 @@ func (sd *StdOutDestination) Deliver(ctx context.Context, event *optimusv1.LogEv
 	}
 	return nil
 }
+func (sd *StdOutDestination) Close() error {
+	return nil
+}
