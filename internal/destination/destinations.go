@@ -13,10 +13,14 @@ import (
 	"github.com/binarymatt/optimus/internal/pubsub"
 )
 
+var (
+	ErrNoProcessor = errors.New("no internal processor")
+)
+
 type Deliverer = func(context.Context, *optimusv1.LogEvent) error
 type Initializer = func() error
 type Closer = func() error
-type InternalDestination interface {
+type DestinationProcessor interface {
 	Setup() error
 	Deliver(context.Context, *optimusv1.LogEvent) error
 	Close() error
@@ -34,7 +38,7 @@ type Destination struct {
 	// InternalConfig map[string]any `yaml:",inline"`
 }
 
-func (d *Destination) WithProcessor(internal InternalDestination) {
+func (d *Destination) WithProcessor(internal DestinationProcessor) {
 	slog.Info("setting up processor", "id", d.id, "kind", d.Kind)
 	d.process = internal.Deliver
 	d.initialize = internal.Setup
@@ -62,7 +66,7 @@ func (d *Destination) UnmarshalYAML(n *yaml.Node) error {
 	d.Kind = tmp.Kind
 	d.Subscriptions = tmp.Subscriptions
 	d.BufferSize = tmp.BufferSize
-	var internal InternalDestination
+	var internal DestinationProcessor
 	switch d.Kind {
 	case "stdout":
 		var std StdOutDestination
@@ -84,7 +88,7 @@ func (d *Destination) UnmarshalYAML(n *yaml.Node) error {
 		internal = &fout
 	}
 	if internal == nil {
-		return errors.New("did not have an internal processor")
+		return ErrNoProcessor
 	}
 	d.WithProcessor(internal)
 	return nil
@@ -114,7 +118,7 @@ func (d *Destination) Process(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			slog.Info("context is done, shutting down destination event loop", "id", d.id, "kind", d.Kind)
+			slog.InfoContext(ctx, "context is done, shutting down destination event loop", "id", d.id, "kind", d.Kind)
 			return
 		case event := <-d.inputs:
 			slog.Debug("delivering event", "event", event, "deliverer", d.process)
