@@ -1,7 +1,7 @@
 package destination
 
 import (
-	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -35,7 +35,7 @@ func (f *FileDestination) Setup() error {
 		return err
 	}
 	f.f = openFile
-	f.w = bufio.NewWriter(openFile)
+	f.w = openFile
 	return nil
 }
 
@@ -45,7 +45,10 @@ func (f *FileDestination) Deliver(ctx context.Context, event *optimusv1.LogEvent
 		slog.Error("could not marshall data for writing to file", "error", err)
 		return err
 	}
-	_, err = f.f.WriteString(string(raw) + "\n")
+	combined := bytes.NewBuffer(raw)
+	combined.WriteString("\n")
+	_, err = f.w.Write(combined.Bytes())
+
 	return err
 }
 func (f *FileDestination) Close() error {
