@@ -3,6 +3,7 @@ package destination
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"log/slog"
 	"os"
 
@@ -11,10 +12,17 @@ import (
 
 type StdOutDestination struct {
 	encoder *json.Encoder
+	Writer  io.Writer
 }
 
 func (sd *StdOutDestination) Setup() error {
-	sd.encoder = json.NewEncoder(os.Stdout)
+	var writer io.Writer
+	if sd.Writer != nil {
+		writer = sd.Writer
+	} else {
+		writer = os.Stdout
+	}
+	sd.encoder = json.NewEncoder(writer)
 	return nil
 }
 

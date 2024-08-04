@@ -16,7 +16,7 @@ import (
 	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
 )
 
-func TestSetup_Basic(t *testing.T) {
+func TestHttpSetup_Basic(t *testing.T) {
 	ht := &HttpDestination{
 		Endpoint: "http://example.com",
 	}
@@ -27,12 +27,12 @@ func TestSetup_Basic(t *testing.T) {
 	must.Eq(t, ht.client.RetryMax, 0)
 	must.Eq(t, ht.client.HTTPClient.Timeout, 0)
 }
-func TestSetup_Error(t *testing.T) {
+func TestHttpSetup_Error(t *testing.T) {
 	ht := &HttpDestination{}
 	err := ht.Setup()
 	must.ErrorIs(t, ErrMissingEndpoint, err)
 }
-func TestSetup_Advanced(t *testing.T) {
+func TestHttpSetup_Advanced(t *testing.T) {
 
 	ht := &HttpDestination{
 		Endpoint: "http://example.com",
@@ -47,7 +47,7 @@ func TestSetup_Advanced(t *testing.T) {
 	must.Eq(t, 100*time.Millisecond, ht.client.HTTPClient.Timeout)
 }
 
-func TestAddHeaders(t *testing.T) {
+func TestHttpAddHeaders(t *testing.T) {
 	basicEvent := &optimusv1.LogEvent{}
 	cases := []struct {
 		name      string
@@ -100,7 +100,7 @@ func TestAddHeaders(t *testing.T) {
 	}
 }
 
-func TestDeliver(t *testing.T) {
+func TestHttpDeliver(t *testing.T) {
 	expected := &optimusv1.LogEvent{
 		Data: &structpb.Struct{
 			Fields: map[string]*structpb.Value{
