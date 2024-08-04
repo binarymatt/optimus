@@ -36,5 +36,5 @@ func TestStdOutDeliver(t *testing.T) {
 	}
 	err = sd.Deliver(context.Background(), event)
 	must.NoError(t, err)
-	must.Eq(t, `{"test":"val"}`, writer.String())
+	must.Eq(t, "{\"test\":\"val\"}\n", writer.String())
 }
