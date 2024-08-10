@@ -40,14 +40,14 @@ func TestInit(t *testing.T) {
 	p := &TestProcessor{}
 	d := &Destination{}
 	d.WithProcessor(p)
-	must.Eq(t, "", d.id)
+	must.Eq(t, "", d.ID)
 	must.Eq(t, 0, d.BufferSize)
 	must.Nil(t, d.inputs)
 	must.Nil(t, d.Subscriber)
 
 	err := d.Init("testing")
 	must.NoError(t, err)
-	must.Eq(t, "testing", d.id)
+	must.Eq(t, "testing", d.ID)
 	must.True(t, p.SetupCalled)
 }
 

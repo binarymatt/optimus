@@ -27,5 +27,6 @@ func (cd *ChannelDestination) Deliver(ctx context.Context, event *optimusv1.LogE
 	return nil
 }
 func (cd *ChannelDestination) Close() error {
+	close(cd.Output)
 	return nil
 }

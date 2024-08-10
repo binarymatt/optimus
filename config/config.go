@@ -66,3 +66,10 @@ func (c *Config) WithChannelOutput(name string, out chan<- *optimusv1.LogEvent) 
 	c.Destinations[name] = destination
 	return c
 }
+func New() *Config {
+	return &Config{
+		Inputs:       make(map[string]*input.Input),
+		Filters:      make(map[string]*filter.Filter),
+		Destinations: make(map[string]*destination.Destination),
+	}
+}
