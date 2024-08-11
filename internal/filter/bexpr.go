@@ -17,7 +17,7 @@ type BexprFilter struct {
 func (b *BexprFilter) Setup() error {
 	eval, err := bexpr.CreateEvaluator(b.Expression)
 	if err != nil {
-		slog.Error("could not initialize evaluator")
+		slog.Error("bexpr.Setup: could not initialize evaluator", "error", err)
 		return err
 	}
 	b.evaluator = eval

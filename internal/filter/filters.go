@@ -2,7 +2,7 @@ package filter
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"log/slog"
 
 	"gopkg.in/yaml.v3"
@@ -38,23 +38,37 @@ func (f *Filter) SetupInternal() error {
 func (f *Filter) UnmarshalYAML(n *yaml.Node) error {
 	//type I Input
 	//slog.Info("inside", "node", n, "input", i)
-	for i := 0; i < len(n.Content)/2; i += 2 {
-		key := n.Content[i]
-		value := n.Content[i+1]
-		if key.Kind == yaml.ScalarNode && key.Value == "kind" {
-			if value.Kind != yaml.ScalarNode {
-				return errors.New("kind is not scalar")
+	/*
+		for i := 0; i < len(n.Content)/2; i += 2 {
+			key := n.Content[i]
+			value := n.Content[i+1]
+			if key.Kind == yaml.ScalarNode && key.Value == "kind" {
+				if value.Kind != yaml.ScalarNode {
+					return errors.New("kind is not scalar")
+				}
+				f.Kind = value.Value
 			}
-			f.Kind = value.Value
 		}
+	*/
+	type alias Filter
+	tmp := (*alias)(f)
+	if err := n.Decode(&tmp); err != nil {
+		slog.Error("inside top level decode", "error", err)
+		return err
 	}
+	f.Kind = tmp.Kind
+	f.Subscriptions = tmp.Subscriptions
+	f.BufferSize = tmp.BufferSize
 	switch f.Kind {
 	case "bexpr":
+		fmt.Println("bexpr unmarshal")
 		var bFilter BexprFilter
 		if err := n.Decode(&bFilter); err != nil {
+			fmt.Println(err)
 			return err
 		}
 		if err := bFilter.Setup(); err != nil {
+			fmt.Println("error during setup")
 			return err
 		}
 		f.process = bFilter.Process
