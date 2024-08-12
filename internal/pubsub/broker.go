@@ -17,6 +17,7 @@ type Broker struct {
 func NewBroker(id string) *Broker {
 	// returns new broker object
 	return &Broker{
+		id:          id,
 		subscribers: map[string]*Subscriber{},
 	}
 }

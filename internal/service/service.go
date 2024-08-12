@@ -6,7 +6,6 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/bufbuild/protovalidate-go"
-	"google.golang.org/protobuf/reflect/protoreflect"
 
 	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
 	"github.com/binarymatt/optimus/gen/optimus/v1/optimusv1connect"
@@ -19,7 +18,7 @@ type Service struct {
 	Broker *pubsub.Broker
 }
 
-func validate(msg protoreflect.ProtoMessage) *connect.Error {
+func validate(msg *optimusv1.StoreLogEventRequest) *connect.Error {
 	validator, err := protovalidate.New()
 	if err != nil {
 		return connect.NewError(connect.CodeInternal, err)

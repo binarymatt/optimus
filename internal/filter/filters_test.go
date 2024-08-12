@@ -1,10 +1,14 @@
 package filter
 
 import (
+	"context"
 	"testing"
 
 	"github.com/shoenig/test/must"
+	"golang.org/x/sync/errgroup"
 	"gopkg.in/yaml.v3"
+
+	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
 )
 
 var unknownYaml = `---
@@ -56,4 +60,30 @@ func TestUnmarshalYaml(t *testing.T) {
 	f := &Filter{}
 	must.NoError(t, yaml.Unmarshal([]byte(yamlStr), &raw))
 	must.NoError(t, f.UnmarshalYAML(&raw))
+}
+
+func TestProcess(t *testing.T) {
+	f := &Filter{
+		BufferSize: 1,
+		process: func(ctx context.Context, event *optimusv1.LogEvent) (*optimusv1.LogEvent, error) {
+			return event, nil
+		},
+	}
+	f.Init("testing")
+	ctx, cancel := context.WithCancel(context.Background())
+	eg, ctx := errgroup.WithContext(ctx)
+	eg.Go(func() error {
+		// send event to channel
+		f.inputs <- &optimusv1.LogEvent{
+			Id: "test",
+		}
+		// cancel context
+		cancel()
+		return nil
+	})
+	eg.Go(func() error {
+		return f.Process(ctx)
+	})
+	must.NoError(t, eg.Wait())
+
 }

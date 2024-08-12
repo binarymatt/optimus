@@ -36,20 +36,6 @@ func (f *Filter) SetupInternal() error {
 	return nil
 }
 func (f *Filter) UnmarshalYAML(n *yaml.Node) error {
-	//type I Input
-	//slog.Info("inside", "node", n, "input", i)
-	/*
-		for i := 0; i < len(n.Content)/2; i += 2 {
-			key := n.Content[i]
-			value := n.Content[i+1]
-			if key.Kind == yaml.ScalarNode && key.Value == "kind" {
-				if value.Kind != yaml.ScalarNode {
-					return errors.New("kind is not scalar")
-				}
-				f.Kind = value.Value
-			}
-		}
-	*/
 	type alias Filter
 	tmp := (*alias)(f)
 	if err := n.Decode(&tmp); err != nil {
