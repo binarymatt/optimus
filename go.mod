@@ -8,7 +8,9 @@ require (
 	github.com/bufbuild/protovalidate-go v0.6.2
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/hashicorp/go-bexpr v0.1.14
+	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/lmittmann/tint v1.0.4
+	github.com/mitchellh/pointerstructure v1.2.1
 	github.com/oklog/ulid/v2 v2.1.0
 	github.com/prometheus/client_golang v1.19.0
 	github.com/shoenig/test v1.8.2
@@ -17,7 +19,7 @@ require (
 	golang.org/x/net v0.24.0
 	golang.org/x/sync v0.7.0
 	google.golang.org/grpc v1.62.1
-	google.golang.org/protobuf v1.33.0
+	google.golang.org/protobuf v1.34.2
 	gopkg.in/yaml.v3 v3.0.1
 	quamina.net/go/quamina v1.0.0
 )
@@ -32,9 +34,7 @@ require (
 	github.com/google/cel-go v0.20.1 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
-	github.com/mitchellh/pointerstructure v1.2.1 // indirect
 	github.com/prometheus/client_model v0.5.0 // indirect
 	github.com/prometheus/common v0.48.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect

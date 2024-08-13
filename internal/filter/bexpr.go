@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/go-bexpr"
 
 	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
+	"github.com/binarymatt/optimus/internal/utils"
 )
 
 type BexprFilter struct {
@@ -31,12 +32,7 @@ func (b *BexprFilter) Process(ctx context.Context, event *optimusv1.LogEvent) (*
 		return nil, err
 	}
 	if result {
-		new := &optimusv1.LogEvent{
-			Id:        event.Id,
-			Data:      event.Data,
-			Source:    event.Source,
-			Upstreams: event.Upstreams,
-		}
+		new := utils.CopyLogEvent(event)
 		return new, nil
 	}
 	return nil, nil

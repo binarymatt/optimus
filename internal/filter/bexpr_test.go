@@ -8,6 +8,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 
 	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
+	"github.com/binarymatt/optimus/internal/testutil"
 )
 
 func TestBexprSetup_Err(t *testing.T) {
@@ -41,7 +42,7 @@ func TestBexprProcess(t *testing.T) {
 	event := &optimusv1.LogEvent{Data: data}
 	ev, err := bf.Process(context.Background(), event)
 	must.NoError(t, err)
-	must.Eq(t, event, ev)
+	must.Eq(t, event, ev, testutil.CmpTransform)
 
 	bf2 := BexprFilter{
 		Expression: "foo.bar == false",

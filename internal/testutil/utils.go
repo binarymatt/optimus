@@ -1,11 +1,14 @@
 package testutil
 
 import (
+	"github.com/shoenig/test/must"
+	"google.golang.org/protobuf/testing/protocmp"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
 )
 
+var CmpTransform = must.Cmp(protocmp.Transform())
 var eventData = map[string]interface{}{
 	"Image": map[string]any{
 		"Width":  800,
