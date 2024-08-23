@@ -126,7 +126,7 @@ func (d *Destination) Process(ctx context.Context) {
 			if err != nil {
 				slog.Error("error delivering record", "error", err)
 			}
-			metrics.RecordProcessedRecord(fmt.Sprintf("%s_destination", d.Kind), d.ID)
+			metrics.IncProcessedRecord(fmt.Sprintf("%s_destination", d.Kind), d.ID)
 		}
 	}
 

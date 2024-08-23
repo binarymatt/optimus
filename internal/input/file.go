@@ -46,7 +46,7 @@ func (fi *FileInput) Initialize(id string, broker *pubsub.Broker) error {
 			Source: path,
 			Data:   data,
 		}
-		metrics.RecordProcessedRecord("file_input", id)
+		metrics.IncProcessedRecord("file_input", id)
 		broker.Broadcast(event)
 		return nil
 	})

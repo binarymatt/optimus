@@ -33,7 +33,7 @@ func (ci *ChannelInput) Process(ctx context.Context) error {
 			return nil
 		case e := <-ci.Input:
 			ci.broker.Broadcast(e)
-			metrics.RecordProcessedRecord(fmt.Sprintf("%s_input", "channel"), ci.id)
+			metrics.IncProcessedRecord(fmt.Sprintf("%s_input", "channel"), ci.id)
 		}
 	}
 }

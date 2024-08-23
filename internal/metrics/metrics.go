@@ -7,13 +7,13 @@ import (
 
 var (
 	records_processed = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "records_processed",
+		Name: "input_records_processed",
 	}, []string{
 		"type",
 		"name",
 	})
 )
 
-func RecordProcessedRecord(processor_type, name string) {
+func IncProcessedRecord(processor_type, name string) {
 	records_processed.WithLabelValues(processor_type, name).Inc()
 }

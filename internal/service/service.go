@@ -37,7 +37,7 @@ func (s *Service) StoreLogEvent(ctx context.Context, req *connect.Request[optimu
 	for _, event := range req.Msg.GetEvents() {
 		slog.Debug("broadcasting event", "event", event)
 		s.Broker.Broadcast(event)
-		metrics.RecordProcessedRecord("http_input", s.name)
+		metrics.IncProcessedRecord("http_input", s.name)
 	}
 	return connect.NewResponse(&optimusv1.StoreLogEventResponse{}), nil
 }
