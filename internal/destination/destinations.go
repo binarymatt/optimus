@@ -33,7 +33,7 @@ type Destination struct {
 	Subscriber    *pubsub.Subscriber
 	inputs        chan *optimusv1.LogEvent
 	process       Deliverer
-	initialize    Initializer
+	Initialize    Initializer
 	closer        Closer
 	// InternalConfig map[string]any `yaml:",inline"`
 }
@@ -41,7 +41,7 @@ type Destination struct {
 func (d *Destination) WithProcessor(internal DestinationProcessor) {
 	slog.Info("setting up processor", "id", d.ID, "kind", d.Kind)
 	d.process = internal.Deliver
-	d.initialize = internal.Setup
+	d.Initialize = internal.Setup
 	d.closer = internal.Close
 }
 func (d *Destination) UnmarshalYAML(n *yaml.Node) error {
@@ -106,7 +106,7 @@ func (d *Destination) Init(id string) error {
 	if d.Subscriber == nil {
 		d.Subscriber = pubsub.NewSubscriber(d.ID, d.inputs)
 	}
-	return d.initialize()
+	return d.Initialize()
 }
 
 func (d *Destination) Process(ctx context.Context) {

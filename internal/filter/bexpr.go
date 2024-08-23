@@ -32,8 +32,7 @@ func (b *BexprFilter) Process(ctx context.Context, event *optimusv1.LogEvent) (*
 		return nil, err
 	}
 	if result {
-		new := utils.CopyLogEvent(event)
-		return new, nil
+		return utils.CopyLogEvent(event)
 	}
 	return nil, nil
 }

@@ -16,7 +16,7 @@ import (
 )
 
 type FileInput struct {
-	ID      string
+	id      string
 	Path    string `yaml:"path"`
 	tracker *tail.TailTracker
 }
@@ -53,6 +53,7 @@ func (fi *FileInput) Initialize(id string, broker *pubsub.Broker) error {
 	if err != nil {
 		return err
 	}
+	fi.id = id
 	return nil
 }
 

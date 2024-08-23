@@ -26,7 +26,7 @@ func TestStoreLogEvent(t *testing.T) {
 	}))
 	must.NoError(t, err)
 	storedEv := <-ch
-	expectedEvent := utils.CopyLogEvent(ev)
+	expectedEvent, _ := utils.CopyLogEvent(ev)
 	expectedEvent.Upstreams = []string{"test"}
 	must.Eq(t, expectedEvent, storedEv, must.Cmp(protocmp.Transform()))
 }

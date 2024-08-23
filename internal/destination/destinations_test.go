@@ -54,7 +54,7 @@ func TestInit(t *testing.T) {
 func TestInit_Error(t *testing.T) {
 	testErr := errors.New("oops")
 	d := &Destination{
-		initialize: func() error {
+		Initialize: func() error {
 			return testErr
 		},
 	}
@@ -64,11 +64,11 @@ func TestInit_Error(t *testing.T) {
 
 func TestWithProcessor(t *testing.T) {
 	d := &Destination{}
-	must.Nil(t, d.initialize)
+	must.Nil(t, d.Initialize)
 	must.Nil(t, d.process)
 	must.Nil(t, d.closer)
 	d.WithProcessor(&TestProcessor{})
-	must.NotNil(t, d.initialize)
+	must.NotNil(t, d.Initialize)
 	must.NotNil(t, d.process)
 	must.NotNil(t, d.closer)
 }
