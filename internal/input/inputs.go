@@ -32,12 +32,14 @@ func (i *Input) Process(ctx context.Context) (err error) {
 	return i.Processor(ctx)
 }
 
-func (in *Input) Init(id string) {
+func (in *Input) Init(id string) (*pubsub.Broker, error) {
 	in.ID = id
 	in.Broker = pubsub.NewBroker(in.ID)
 	if err := in.Initialize(in.ID, in.Broker); err != nil {
 		slog.Error("could not setup input", "error", err)
+		return nil, err
 	}
+	return in.Broker, nil
 }
 func (in *Input) WithInputProcessor(inputSpecific InputProcessor) {
 	in.Processor = inputSpecific.Process

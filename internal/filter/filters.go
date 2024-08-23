@@ -23,7 +23,7 @@ type Filter struct {
 	BufferSize    int      `yaml:"buffer_size"`
 }
 
-func (f *Filter) Init(id string) {
+func (f *Filter) Init(id string) *pubsub.Broker {
 	f.id = id
 	if f.BufferSize == 0 {
 		f.BufferSize = 5
@@ -31,6 +31,7 @@ func (f *Filter) Init(id string) {
 	f.Broker = pubsub.NewBroker(f.id)
 	f.inputs = make(chan *optimusv1.LogEvent, f.BufferSize)
 	f.Subscriber = pubsub.NewSubscriber(f.id, f.inputs)
+	return f.Broker
 }
 func (f *Filter) SetupInternal() error {
 	return nil

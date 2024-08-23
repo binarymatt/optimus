@@ -39,13 +39,16 @@ func (o *Optimus) setup() error {
 		if input.Kind == "http" {
 			o.cfg.HttpInputEnabled = true
 		}
-		input.Init(key)
-		o.parents[key] = input.Broker
+		broker, err := input.Init(key)
+		if err != nil {
+			return err
+		}
+		o.parents[key] = broker
 	}
 	slog.Debug("configuring filters")
 	for key, filter := range cfg.Filters {
-		filter.Init(key)
-		o.parents[key] = filter.Broker
+		broker := filter.Init(key)
+		o.parents[key] = broker
 	}
 	for key, destination := range cfg.Destinations {
 		if err := destination.Init(key); err != nil {
