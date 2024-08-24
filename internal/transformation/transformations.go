@@ -8,14 +8,17 @@ import (
 	"github.com/binarymatt/optimus/internal/pubsub"
 )
 
-type Transformer interface {
+type TransformerOld interface {
 	Transform(ctx context.Context, event *optimusv1.LogEvent) *optimusv1.LogEvent
 }
+type Transformer = func(ctx context.Context, event *optimusv1.LogEvent) (*optimusv1.LogEvent, error)
+
 type Transformation struct {
 	Name        string
-	broker      *pubsub.Broker
-	transformer Transformer
+	Broker      *pubsub.Broker
+	Subscriber  *pubsub.Subscriber
 	inputs      chan *optimusv1.LogEvent
+	transformer Transformer
 }
 
 func (t *Transformation) Process(ctx context.Context) error {
@@ -25,10 +28,28 @@ func (t *Transformation) Process(ctx context.Context) error {
 			slog.Info("context is done, shutting down transformation event loop")
 			return nil
 		case event := <-t.inputs:
-			newEvent := t.transformer.Transform(ctx, event)
+			newEvent, err := t.transformer(ctx, event)
+			if err != nil {
+				slog.Error("could not transform event", "error", err)
+				newEvent = nil
+			}
 			if newEvent != nil {
-				t.broker.Broadcast(newEvent)
+				t.Broker.Broadcast(newEvent)
 			}
 		}
+	}
+}
+
+func (t *Transformation) Init() *pubsub.Broker {
+	t.Broker = pubsub.NewBroker(t.Name)
+	t.inputs = make(chan *optimusv1.LogEvent, 1)
+	t.Subscriber = pubsub.NewSubscriber(t.Name, t.inputs)
+	return t.Broker
+}
+
+func New(name string, transformer Transformer) *Transformation {
+	return &Transformation{
+		Name:        name,
+		transformer: transformer,
 	}
 }
