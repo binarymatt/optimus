@@ -9,6 +9,7 @@ import (
 	"github.com/binarymatt/optimus/internal/destination"
 	"github.com/binarymatt/optimus/internal/filter"
 	"github.com/binarymatt/optimus/internal/input"
+	"github.com/binarymatt/optimus/internal/transformation"
 )
 
 type Config struct {
@@ -20,6 +21,7 @@ type Config struct {
 	Inputs           map[string]*input.Input             `yaml:"inputs"`
 	Filters          map[string]*filter.Filter           `yaml:"filters"`
 	Destinations     map[string]*destination.Destination `yaml:"destinations"`
+	Transformations  map[string]*transformation.Transformation
 }
 
 func LoadYamlFromFile(path string) (*Config, error) {
@@ -66,10 +68,17 @@ func (c *Config) WithChannelOutput(name string, out chan<- *optimusv1.LogEvent) 
 	c.Destinations[name] = destination
 	return c
 }
+
+func (c *Config) WithTransformer(name string, transformer transformation.Transformer) *Config {
+	t := transformation.New(name, transformer)
+	c.Transformations[name] = t
+	return c
+}
 func New() *Config {
 	return &Config{
-		Inputs:       make(map[string]*input.Input),
-		Filters:      make(map[string]*filter.Filter),
-		Destinations: make(map[string]*destination.Destination),
+		Inputs:          make(map[string]*input.Input),
+		Filters:         make(map[string]*filter.Filter),
+		Destinations:    make(map[string]*destination.Destination),
+		Transformations: make(map[string]*transformation.Transformation),
 	}
 }

@@ -144,6 +144,7 @@ func (o *Optimus) Run(ctx context.Context) error {
 			return nil
 		})
 	}
+	// TODO add transformations
 	slog.Info("all components started, running...")
 	return eg.Wait()
 }

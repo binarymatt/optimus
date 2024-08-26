@@ -8,9 +8,6 @@ import (
 	"github.com/binarymatt/optimus/internal/pubsub"
 )
 
-type TransformerOld interface {
-	Transform(ctx context.Context, event *optimusv1.LogEvent) *optimusv1.LogEvent
-}
 type Transformer = func(ctx context.Context, event *optimusv1.LogEvent) (*optimusv1.LogEvent, error)
 
 type Transformation struct {
@@ -28,14 +25,17 @@ func (t *Transformation) Process(ctx context.Context) error {
 			slog.Info("context is done, shutting down transformation event loop")
 			return nil
 		case event := <-t.inputs:
-			newEvent, err := t.transformer(ctx, event)
-			if err != nil {
-				slog.Error("could not transform event", "error", err)
-				newEvent = nil
+			if t.transformer != nil {
+				newEvent, err := t.transformer(ctx, event)
+				if err != nil {
+					slog.Error("could not transform event", "error", err)
+					newEvent = nil
+				}
+				if newEvent != nil {
+					t.Broker.Broadcast(newEvent)
+				}
 			}
-			if newEvent != nil {
-				t.Broker.Broadcast(newEvent)
-			}
+
 		}
 	}
 }
