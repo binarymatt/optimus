@@ -1,7 +1,6 @@
 package pubsub
 
 import (
-	"log/slog"
 	"sync"
 
 	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
@@ -34,12 +33,4 @@ func (s *Subscriber) Signal(le *optimusv1.LogEvent) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	s.messages <- le
-}
-func (s *Subscriber) Listen() {
-	// Listens to the message channel, prints once received.
-	for {
-		if msg, ok := <-s.messages; ok {
-			slog.Info("subscriber receieved", "event", msg)
-		}
-	}
 }
