@@ -12,6 +12,7 @@ import (
 	"github.com/binarymatt/optimus/internal/transformation"
 )
 
+type ConfigOption func(*Config)
 type Config struct {
 	DataDir          string `yaml:"data_dir"` // used to store data about positions.
 	MetricsEnabled   bool   `yaml:"metrics_enabled"`
@@ -44,41 +45,48 @@ func (c *Config) Init() {
 	}
 }
 
-func (c *Config) WithChannelInput(name string, in <-chan *optimusv1.LogEvent) *Config {
-	ci := &input.ChannelInput{
-		Input: in,
+func WithChannelInput(name string, in <-chan *optimusv1.LogEvent) ConfigOption {
+	return func(c *Config) {
+		ci := &input.ChannelInput{
+			Input: in,
+		}
+		i := &input.Input{
+			ID:   name,
+			Kind: "channel",
+		}
+		i.WithInputProcessor(ci)
+		c.Inputs[name] = i
 	}
-	i := &input.Input{
-		ID:   name,
-		Kind: "channel",
-	}
-	i.WithInputProcessor(ci)
-	c.Inputs[name] = i
-	return c
 }
 
-func (c *Config) WithChannelOutput(name string, out chan<- *optimusv1.LogEvent) *Config {
-	cd := &destination.ChannelDestination{
-		Output: out,
+func WithChannelOutput(name string, out chan<- *optimusv1.LogEvent) ConfigOption {
+	return func(c *Config) {
+		cd := &destination.ChannelDestination{
+			Output: out,
+		}
+		destination := &destination.Destination{
+			Kind: "channel",
+		}
+		destination.WithProcessor(cd)
+		c.Destinations[name] = destination
 	}
-	destination := &destination.Destination{
-		Kind: "channel",
-	}
-	destination.WithProcessor(cd)
-	c.Destinations[name] = destination
-	return c
 }
 
-func (c *Config) WithTransformer(name string, transformer transformation.Transformer) *Config {
-	t := transformation.New(name, transformer)
-	c.Transformations[name] = t
-	return c
+func WithTransformer(name string, transformer transformation.Transformer) ConfigOption {
+	return func(c *Config) {
+		t := transformation.New(name, transformer)
+		c.Transformations[name] = t
+	}
 }
-func New() *Config {
-	return &Config{
+func New(opts ...ConfigOption) *Config {
+	c := &Config{
 		Inputs:          make(map[string]*input.Input),
 		Filters:         make(map[string]*filter.Filter),
 		Destinations:    make(map[string]*destination.Destination),
 		Transformations: make(map[string]*transformation.Transformation),
 	}
+	for _, opt := range opts {
+		opt(c)
+	}
+	return c
 }

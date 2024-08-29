@@ -14,14 +14,12 @@ import (
 )
 
 type HTTPInput struct {
-	ID      string
-	Address string `yaml:"address"`
+	ID string
+	// Address string `yaml:"address"`
 }
 
-func (hi *HTTPInput) SetID(id string) {
+func (hi *HTTPInput) Initialize(id string, broker pubsub.Broker) error {
 	hi.ID = id
-}
-func (hi *HTTPInput) Initialize(id string, broker *pubsub.Broker) error {
 	path, handler := optimusv1connect.NewOptimusLogServiceHandler(service.New(broker, id),
 		connect.WithInterceptors(
 			logging.NewInterceptor(),

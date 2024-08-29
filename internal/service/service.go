@@ -15,7 +15,7 @@ import (
 
 type Service struct {
 	name   string
-	Broker *pubsub.Broker
+	Broker pubsub.Broker
 }
 
 func validate(msg *optimusv1.StoreLogEventRequest) *connect.Error {
@@ -42,7 +42,7 @@ func (s *Service) StoreLogEvent(ctx context.Context, req *connect.Request[optimu
 	return connect.NewResponse(&optimusv1.StoreLogEventResponse{}), nil
 }
 
-func New(broker *pubsub.Broker, name string) optimusv1connect.OptimusLogServiceHandler {
+func New(broker pubsub.Broker, name string) optimusv1connect.OptimusLogServiceHandler {
 	return &Service{
 		name:   name,
 		Broker: broker,

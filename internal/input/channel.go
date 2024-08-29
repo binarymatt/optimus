@@ -16,11 +16,11 @@ var (
 
 type ChannelInput struct {
 	id     string
-	broker *pubsub.Broker
+	broker pubsub.Broker
 	Input  <-chan *optimusv1.LogEvent
 }
 
-func (ci *ChannelInput) Initialize(id string, broker *pubsub.Broker) error {
+func (ci *ChannelInput) Initialize(id string, broker pubsub.Broker) error {
 	ci.broker = broker
 	ci.id = id
 	return nil

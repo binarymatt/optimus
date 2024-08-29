@@ -18,14 +18,14 @@ import (
 
 type Optimus struct {
 	cfg     *config.Config
-	parents map[string]*pubsub.Broker
+	parents map[string]pubsub.Broker
 }
 
 func New(cfg *config.Config) (*Optimus, error) {
 	cfg.Init()
 	o := &Optimus{
 		cfg:     cfg,
-		parents: make(map[string]*pubsub.Broker),
+		parents: make(map[string]pubsub.Broker),
 	}
 	err := o.setup()
 	return o, err

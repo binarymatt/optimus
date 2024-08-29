@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -70,9 +71,9 @@ func TestLoadYaml(t *testing.T) {
 }
 
 func TestWithChannelInput(t *testing.T) {
-	c := New()
 	ch := make(chan *optimusv1.LogEvent)
-	c.WithChannelInput("testing", ch)
+	opt := WithChannelInput("testing", ch)
+	c := New(opt)
 	input, ok := c.Inputs["testing"]
 	must.True(t, ok)
 	must.NotNil(t, input)
@@ -81,11 +82,22 @@ func TestWithChannelInput(t *testing.T) {
 }
 
 func TestWithChannelOutput(t *testing.T) {
-	cfg := New()
 	ch := make(chan *optimusv1.LogEvent)
-	cfg.WithChannelOutput("testOut", ch)
+	opt := WithChannelOutput("testOut", ch)
+	cfg := New(opt)
 	out, ok := cfg.Destinations["testOut"]
 	must.True(t, ok)
 	must.NotNil(t, out)
 	must.Eq(t, "channel", out.Kind)
+}
+
+func TestWithTransformer(t *testing.T) {
+	tr := func(_ context.Context, _ *optimusv1.LogEvent) (*optimusv1.LogEvent, error) {
+		return nil, nil
+	}
+	opt := WithTransformer("testname", tr)
+	cfg := New(opt)
+	out, ok := cfg.Transformations["testname"]
+	must.True(t, ok)
+	must.NotNil(t, out)
 }

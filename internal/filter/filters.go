@@ -14,8 +14,8 @@ import (
 type FilterFunc = func(context.Context, *optimusv1.LogEvent) (*optimusv1.LogEvent, error)
 type Filter struct {
 	id            string
-	Broker        *pubsub.Broker
-	Subscriber    *pubsub.Subscriber
+	Broker        pubsub.Broker
+	Subscriber    pubsub.Subscriber
 	inputs        chan *optimusv1.LogEvent
 	process       FilterFunc
 	Kind          string   `yaml:"kind"`
@@ -23,7 +23,7 @@ type Filter struct {
 	BufferSize    int      `yaml:"buffer_size"`
 }
 
-func (f *Filter) Init(id string) *pubsub.Broker {
+func (f *Filter) Init(id string) pubsub.Broker {
 	f.id = id
 	if f.BufferSize == 0 {
 		f.BufferSize = 5

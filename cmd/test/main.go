@@ -48,7 +48,7 @@ func main() {
 		return
 	}
 	c := make(chan *optimusv1.LogEvent)
-	cfg.WithChannelInput("testing", c)
+	config.WithChannelInput("testing", c)(cfg)
 	o, err := optimus.New(cfg)
 	if err != nil {
 		return

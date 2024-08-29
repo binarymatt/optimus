@@ -13,15 +13,19 @@ func TestNewBroker(t *testing.T) {
 	b := NewBroker("test")
 	must.NotNil(t, b)
 	must.Eq(t, "test", b.id)
-	must.Eq(t, map[string]*Subscriber{}, b.subscribers)
+	must.Eq(t, map[string]Subscriber{}, b.subscribers)
 }
 
 func TestAddSubscriber(t *testing.T) {
-	b := NewBroker("test")
+	b := &broker{
+		id:          "test",
+		subscribers: map[string]Subscriber{},
+	}
+
 	must.MapEmpty(t, b.subscribers)
 
-	sub := &Subscriber{id: "test"}
-	expected := map[string]*Subscriber{
+	sub := &subscriber{id: "test"}
+	expected := map[string]Subscriber{
 		"test": sub,
 	}
 	b.AddSubscriber(sub)

@@ -6,11 +6,11 @@ lint:
 	@golangci-lint run
 .PHONY: test
 test:
-	@gotestsum $(shell go list ./... | grep -v gen | grep -v cmd)
+	@gotestsum $(shell go list ./... | grep -v gen | grep -v cmd | grep -v mocks)
 
 .PHONY: test-with-coverage
 test-with-coverage:
-	@gotestsum $(shell go list ./... | grep -v gen | grep -v cmd) -coverprofile=cover.out
+	@gotestsum $(shell go list ./... | grep -v gen | grep -v cmd | grep -v mocks) -coverprofile=cover.out
 
 .PHONY: show-coverage
 coverage:

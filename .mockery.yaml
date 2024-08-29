@@ -1,0 +1,10 @@
+with-expecter: true
+filename: "mock_{{.InterfaceName}}.go"
+dir: "mocks/"
+mockname: "Mock{{.InterfaceName}}"
+outpkg: "mocks"
+packages:
+  github.com/binarymatt/optimus/internal/pubsub:
+    # place your package-specific config here
+    config:
+      all: true

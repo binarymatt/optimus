@@ -30,7 +30,7 @@ type Destination struct {
 	Kind          string   `yaml:"kind"`
 	BufferSize    int      `yaml:"buffer_size"`
 	Subscriptions []string `yaml:"subscriptions"`
-	Subscriber    *pubsub.Subscriber
+	Subscriber    pubsub.Subscriber
 	inputs        chan *optimusv1.LogEvent
 	process       Deliverer
 	Initialize    Initializer

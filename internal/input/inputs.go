@@ -15,9 +15,9 @@ var (
 )
 
 type Processor = func(context.Context) error
-type Initializer = func(id string, broker *pubsub.Broker) error
+type Initializer = func(id string, broker pubsub.Broker) error
 type InputProcessor interface {
-	Initialize(id string, broker *pubsub.Broker) error
+	Initialize(id string, broker pubsub.Broker) error
 	Process(context.Context) error
 }
 type Input struct {
@@ -25,14 +25,14 @@ type Input struct {
 	Kind       string `yaml:"kind"`
 	Initialize Initializer
 	Processor  Processor
-	Broker     *pubsub.Broker
+	Broker     pubsub.Broker
 }
 
 func (i *Input) Process(ctx context.Context) (err error) {
 	return i.Processor(ctx)
 }
 
-func (in *Input) Init(id string) (*pubsub.Broker, error) {
+func (in *Input) Init(id string) (pubsub.Broker, error) {
 	in.ID = id
 	in.Broker = pubsub.NewBroker(in.ID)
 	if err := in.Initialize(in.ID, in.Broker); err != nil {

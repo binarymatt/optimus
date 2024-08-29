@@ -12,8 +12,8 @@ type Transformer = func(ctx context.Context, event *optimusv1.LogEvent) (*optimu
 
 type Transformation struct {
 	Name        string
-	Broker      *pubsub.Broker
-	Subscriber  *pubsub.Subscriber
+	Broker      pubsub.Broker
+	Subscriber  pubsub.Subscriber
 	inputs      chan *optimusv1.LogEvent
 	transformer Transformer
 }
@@ -40,7 +40,7 @@ func (t *Transformation) Process(ctx context.Context) error {
 	}
 }
 
-func (t *Transformation) Init() *pubsub.Broker {
+func (t *Transformation) Init() pubsub.Broker {
 	t.Broker = pubsub.NewBroker(t.Name)
 	t.inputs = make(chan *optimusv1.LogEvent, 1)
 	t.Subscriber = pubsub.NewSubscriber(t.Name, t.inputs)

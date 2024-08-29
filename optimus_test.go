@@ -24,13 +24,13 @@ func TestSetup_Inputs(t *testing.T) {
 	cfg := config.New()
 	cfg.Inputs["test"] = &input.Input{
 		Kind: "http",
-		Initialize: func(id string, broker *pubsub.Broker) error {
+		Initialize: func(id string, broker pubsub.Broker) error {
 			return nil
 		},
 	}
 	o := &Optimus{
 		cfg:     cfg,
-		parents: make(map[string]*pubsub.Broker),
+		parents: make(map[string]pubsub.Broker),
 	}
 	must.NoError(t, o.setup())
 	must.True(t, o.cfg.HttpInputEnabled)
@@ -44,13 +44,13 @@ func TestSetup_InputError(t *testing.T) {
 	errOops := errors.New("oops")
 	cfg.Inputs["test"] = &input.Input{
 		Kind: "http",
-		Initialize: func(id string, broker *pubsub.Broker) error {
+		Initialize: func(id string, broker pubsub.Broker) error {
 			return errOops
 		},
 	}
 	o := &Optimus{
 		cfg:     cfg,
-		parents: make(map[string]*pubsub.Broker),
+		parents: make(map[string]pubsub.Broker),
 	}
 	must.ErrorIs(t, o.setup(), errOops)
 }
@@ -62,7 +62,7 @@ func TestSetup_Filters(t *testing.T) {
 	}
 	o := &Optimus{
 		cfg:     cfg,
-		parents: make(map[string]*pubsub.Broker),
+		parents: make(map[string]pubsub.Broker),
 	}
 	must.NoError(t, o.setup())
 	b, ok := o.parents["test"]
@@ -79,7 +79,7 @@ func TestSetup_Destinations(t *testing.T) {
 	}
 	o := &Optimus{
 		cfg:     cfg,
-		parents: make(map[string]*pubsub.Broker),
+		parents: make(map[string]pubsub.Broker),
 	}
 	must.NoError(t, o.setup())
 }
@@ -95,7 +95,7 @@ func TestSetup_DestinationError(t *testing.T) {
 	}
 	o := &Optimus{
 		cfg:     cfg,
-		parents: make(map[string]*pubsub.Broker),
+		parents: make(map[string]pubsub.Broker),
 	}
 	must.ErrorIs(t, o.setup(), errOops)
 }
