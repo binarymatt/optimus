@@ -14,4 +14,8 @@ test-with-coverage:
 
 .PHONY: show-coverage
 coverage:
-	go tool cover -html=cover.out
+	@go tool cover -html=cover.out
+
+.PHONY: mocks
+mocks:
+	@mockery
