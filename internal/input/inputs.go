@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	ErrInvalidInput = errors.New("invalid input config for kind")
+	ErrInvalidInput = errors.New("invalid input config")
 )
 
 type Processor = func(context.Context) error
@@ -46,16 +46,24 @@ func (in *Input) WithInputProcessor(inputSpecific InputProcessor) {
 	in.Initialize = inputSpecific.Initialize
 }
 func (in *Input) UnmarshalYAML(n *yaml.Node) error {
-	for i := 0; i < len(n.Content)/2; i += 2 {
-		key := n.Content[i]
-		value := n.Content[i+1]
-		if key.Kind == yaml.ScalarNode && key.Value == "kind" {
-			if value.Kind != yaml.ScalarNode {
-				return errors.New("kind is not scalar")
+	/*
+		for i := 0; i < len(n.Content)/2; i += 2 {
+			key := n.Content[i]
+			value := n.Content[i+1]
+			if key.Kind == yaml.ScalarNode && key.Value == "kind" {
+				if value.Kind != yaml.ScalarNode {
+					return errors.New("kind is not scalar")
+				}
+				in.Kind = value.Value
 			}
-			in.Kind = value.Value
 		}
+	*/
+	type alias Input
+	tmp := (*alias)(in)
+	if err := n.Decode(&tmp); err != nil {
+		return err
 	}
+	in.Kind = tmp.Kind
 	var internal InputProcessor
 	switch in.Kind {
 	case "file":
@@ -73,7 +81,7 @@ func (in *Input) UnmarshalYAML(n *yaml.Node) error {
 
 	}
 	if internal == nil {
-		return errors.New("did not have an internal processor")
+		return ErrInvalidInput
 	}
 	in.WithInputProcessor(internal)
 	return nil

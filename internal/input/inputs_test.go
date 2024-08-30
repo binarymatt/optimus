@@ -7,6 +7,7 @@ import (
 	"github.com/shoenig/test/must"
 	"github.com/stretchr/testify/mock"
 	"golang.org/x/net/context"
+	"gopkg.in/yaml.v3"
 
 	"github.com/binarymatt/optimus/internal/pubsub"
 )
@@ -71,4 +72,30 @@ func TestInit_Error(t *testing.T) {
 	b, err := i.Init("testid")
 	must.Nil(t, b)
 	must.ErrorIs(t, errOops, err)
+}
+
+var data = `---
+kind: http
+`
+var dataErr = `---
+kind: unknown
+`
+
+func TestUnmarshalYAML(t *testing.T) {
+	i, _, _ := setupInput(t)
+	var raw yaml.Node
+	err := yaml.Unmarshal([]byte(data), &raw)
+	must.NoError(t, err)
+	err = i.UnmarshalYAML(&raw)
+	must.NoError(t, err)
+	must.NotNil(t, i.Processor)
+	must.NotNil(t, i.Initialize)
+}
+func TestUnmarshalYAML_Error(t *testing.T) {
+	i, _, _ := setupInput(t)
+	var raw yaml.Node
+	err := yaml.Unmarshal([]byte(dataErr), &raw)
+	must.NoError(t, err)
+	err = i.UnmarshalYAML(&raw)
+	must.ErrorIs(t, ErrInvalidInput, err)
 }
