@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/shoenig/test/must"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
 )
@@ -92,7 +93,7 @@ func TestWithChannelOutput(t *testing.T) {
 }
 
 func TestWithTransformer(t *testing.T) {
-	tr := func(_ context.Context, _ *optimusv1.LogEvent) (*optimusv1.LogEvent, error) {
+	tr := func(_ context.Context, _ *structpb.Struct) (*structpb.Struct, error) {
 		return nil, nil
 	}
 	opt := WithTransformer("testname", tr)

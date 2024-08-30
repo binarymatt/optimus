@@ -4,11 +4,14 @@ import (
 	"context"
 	"log/slog"
 
+	"google.golang.org/protobuf/types/known/structpb"
+
 	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
 	"github.com/binarymatt/optimus/internal/pubsub"
+	"github.com/binarymatt/optimus/internal/utils"
 )
 
-type Transformer = func(ctx context.Context, event *optimusv1.LogEvent) (*optimusv1.LogEvent, error)
+type Transformer = func(ctx context.Context, data *structpb.Struct) (*structpb.Struct, error)
 
 type Transformation struct {
 	Name        string
@@ -26,10 +29,18 @@ func (t *Transformation) Process(ctx context.Context) error {
 			return nil
 		case event := <-t.inputs:
 			if t.transformer != nil {
-				newEvent, err := t.transformer(ctx, event)
+				var newEvent *optimusv1.LogEvent
+				newData, err := t.transformer(ctx, event.Data)
 				if err != nil {
 					slog.Error("could not transform event", "error", err)
-					newEvent = nil
+					continue
+				} else {
+					newEvent, err = utils.CopyLogEvent(event)
+					if err != nil {
+						slog.Error("could not copy log event", "error", err)
+						continue
+					}
+					newEvent.Data = newData
 				}
 				if newEvent != nil {
 					t.Broker.Broadcast(newEvent)
