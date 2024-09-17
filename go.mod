@@ -5,10 +5,12 @@ go 1.22.2
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.33.0-20240401165935-b983156c5e99.1
 	connectrpc.com/connect v1.16.1
+	github.com/blues/jsonata-go v1.5.4
 	github.com/bufbuild/protovalidate-go v0.6.2
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/hashicorp/go-bexpr v0.1.14
 	github.com/hashicorp/go-retryablehttp v0.7.7
+	github.com/jmespath/go-jmespath v0.4.0
 	github.com/lmittmann/tint v1.0.4
 	github.com/mitchellh/pointerstructure v1.2.1
 	github.com/oklog/ulid/v2 v2.1.0
