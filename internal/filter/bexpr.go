@@ -26,12 +26,14 @@ func (b *BexprFilter) Setup() error {
 }
 
 func (b *BexprFilter) Process(ctx context.Context, event *optimusv1.LogEvent) (*optimusv1.LogEvent, error) {
+	slog.Warn("processing bexpr filter", "pattern", b.Expression)
 	result, err := b.evaluator.Evaluate(event.Data.AsMap())
 	if err != nil {
 		slog.Error("error evaluating", "expression", b.Expression, "event_id", event.Id)
 		return nil, err
 	}
 	if result {
+		slog.Warn("passing event to next")
 		return utils.CopyLogEvent(event)
 	}
 	return nil, nil

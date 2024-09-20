@@ -28,6 +28,15 @@ type Input struct {
 	Broker     pubsub.Broker
 }
 
+func New(id, kind string, internal InputProcessor) *Input {
+	return &Input{
+		ID:         id,
+		Kind:       kind,
+		Processor:  internal.Process,
+		Initialize: internal.Initialize,
+	}
+}
+
 func (i *Input) Process(ctx context.Context) (err error) {
 	return i.Processor(ctx)
 }

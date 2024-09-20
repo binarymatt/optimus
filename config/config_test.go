@@ -1,13 +1,17 @@
 package config
 
 import (
-	"context"
 	"os"
 	"testing"
 
 	"github.com/shoenig/test/must"
 
 	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
+	"github.com/binarymatt/optimus/internal/destination"
+	"github.com/binarymatt/optimus/internal/filter"
+	"github.com/binarymatt/optimus/internal/input"
+	"github.com/binarymatt/optimus/internal/transformation"
+	"github.com/binarymatt/optimus/mocks"
 )
 
 var ymlStr = `---
@@ -83,21 +87,76 @@ func TestWithChannelInput(t *testing.T) {
 
 func TestWithChannelOutput(t *testing.T) {
 	ch := make(chan *optimusv1.LogEvent)
-	opt := WithChannelOutput("testOut", ch)
+	opt := WithChannelOutput("testOut", ch, []string{"test"})
 	cfg := New(opt)
 	out, ok := cfg.Destinations["testOut"]
 	must.True(t, ok)
 	must.NotNil(t, out)
 	must.Eq(t, "channel", out.Kind)
+	must.Eq(t, []string{"test"}, out.Subscriptions)
 }
 
 func TestWithTransformer(t *testing.T) {
-	tr := func(_ context.Context, _ *optimusv1.LogEvent) (*optimusv1.LogEvent, error) {
-		return nil, nil
-	}
-	opt := WithTransformer("testname", tr)
+	trImpl := mocks.NewMockTransformerImpl(t)
+	opt := WithTransformer("testname", "test", []string{}, trImpl)
 	cfg := New(opt)
 	out, ok := cfg.Transformations["testname"]
 	must.True(t, ok)
 	must.NotNil(t, out)
+}
+
+func TestProgramaticConfig(t *testing.T) {
+	cfg := New(
+		WithInput("test_input", "http", &input.HTTPInput{}),
+		WithFilter("test_filter", "bexpr", []string{"test_input"}, &filter.BexprFilter{Expression: `action == "create"`}),
+		WithTransformer("test_transform", "jsonata", []string{"test_filter"}, &transformation.JsonataTransformer{Expression: `{"user_email":principal.email,"path":path}`}),
+		WithDestination("test_dest", "stdout", []string{"test_transform"}, &destination.StdOutDestination{}),
+		WithMetricsEnabled(),
+		WithListenAddress(":8081"),
+	)
+	must.MapLen(t, 1, cfg.Inputs)
+	must.MapLen(t, 1, cfg.Filters)
+	must.MapLen(t, 1, cfg.Transformations)
+	must.MapLen(t, 1, cfg.Destinations)
+	must.Eq(t, ":8081", cfg.ListenAddress)
+	must.True(t, cfg.MetricsEnabled)
+}
+
+var testYaml = `---
+metrics_enabled: true
+listen_address: :8081
+inputs:
+  test_input:
+    kind: http
+filters:
+  test_filter:
+    kind: bexpr
+    expression: action == "create"
+    subscriptions:
+      - test_input
+transformations:
+  test_transform:
+    kind: jsonata
+    expression: '{"user_email":principal.email,"path":path}'
+    subscriptions:
+      - test_filter
+destinations:
+  test_dest:
+    kind: stdout
+    subscriptions:
+      - testtransform
+`
+
+func TestCompareConfig(t *testing.T) {
+	cfg := New(
+		WithInput("test_input", "http", &input.HTTPInput{}),
+		WithFilter("test_filter", "bexpr", []string{"test_input"}, &filter.BexprFilter{Expression: `action == "create"`}),
+		WithTransformer("test_transform", "jsonata", []string{"test_filter"}, &transformation.JsonataTransformer{Expression: `{"user_email":principal.email,"path":path}`}),
+		WithDestination("test_dest", "stdout", []string{"test_transform"}, &destination.StdOutDestination{}),
+		WithMetricsEnabled(),
+		WithListenAddress(":8081"),
+	)
+	yamlCfg, err := NewWithYaml([]byte(testYaml))
+	must.NoError(t, err)
+	must.Eq(t, yamlCfg.HttpInputEnabled, cfg.HttpInputEnabled)
 }

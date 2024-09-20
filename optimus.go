@@ -56,6 +56,14 @@ func (o *Optimus) setup() error {
 			return err
 		}
 	}
+	for key, transformation := range cfg.Transformations {
+		broker, err := transformation.Init(key)
+		if err != nil {
+			slog.Error("could not setup transformation", "name", key, "kind", transformation.Kind)
+			return err
+		}
+		o.parents[key] = broker
+	}
 	return nil
 }
 func (o *Optimus) Run(ctx context.Context) error {
@@ -82,6 +90,20 @@ func (o *Optimus) Run(ctx context.Context) error {
 		eg.Go(func() error {
 			destination.Process(ctx)
 			return nil
+		})
+	}
+	slog.Debug("starting transformations")
+	for _, t := range cfg.Transformations {
+		transformation := t
+		for _, name := range transformation.Subscriptions {
+			broker, ok := o.parents[name]
+			if ok {
+				broker.AddSubscriber(transformation.Subscriber)
+			}
+		}
+		slog.Debug("starting transformation go routine", "name", transformation.ID)
+		eg.Go(func() error {
+			return transformation.Process(ctx)
 		})
 	}
 	slog.Debug("starting filters")

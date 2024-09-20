@@ -2,6 +2,7 @@ package filter
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -11,6 +12,13 @@ import (
 	"github.com/binarymatt/optimus/internal/pubsub"
 )
 
+var (
+	ErrInvalidFilter = errors.New("invalid filter")
+)
+
+type FilterProcessor interface {
+	Process(context.Context, *optimusv1.LogEvent) (*optimusv1.LogEvent, error)
+}
 type FilterFunc = func(context.Context, *optimusv1.LogEvent) (*optimusv1.LogEvent, error)
 type Filter struct {
 	id            string
@@ -21,6 +29,14 @@ type Filter struct {
 	Kind          string   `yaml:"kind"`
 	Subscriptions []string `yaml:"subscriptions"`
 	BufferSize    int      `yaml:"buffer_size"`
+}
+
+func New(id, kind string, subscriptions []string, impl FilterProcessor) *Filter {
+	return &Filter{
+		id:      id,
+		Kind:    kind,
+		process: impl.Process,
+	}
 }
 
 func (f *Filter) Init(id string) pubsub.Broker {
@@ -48,7 +64,6 @@ func (f *Filter) UnmarshalYAML(n *yaml.Node) error {
 	f.BufferSize = tmp.BufferSize
 	switch f.Kind {
 	case "bexpr":
-		fmt.Println("bexpr unmarshal")
 		var bFilter BexprFilter
 		if err := n.Decode(&bFilter); err != nil {
 			fmt.Println(err)
@@ -68,6 +83,8 @@ func (f *Filter) UnmarshalYAML(n *yaml.Node) error {
 			return err
 		}
 		f.process = qFilter.Process
+	default:
+		return ErrInvalidFilter
 	}
 	return nil
 }
@@ -85,6 +102,7 @@ func (f *Filter) Process(ctx context.Context) error {
 				slog.Error("error delivering record - TODO What now with this record", "error", err)
 				continue
 			}
+			slog.Warn("broadcasting from filter...")
 			if newEvent != nil {
 				f.Broker.Broadcast(newEvent)
 			}

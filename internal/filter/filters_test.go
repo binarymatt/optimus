@@ -52,7 +52,7 @@ func TestUnknownFilter(t *testing.T) {
 	var raw yaml.Node
 	f := &Filter{}
 	must.NoError(t, yaml.Unmarshal([]byte(unknownYaml), &raw))
-	must.NoError(t, f.UnmarshalYAML(&raw))
+	must.ErrorIs(t, f.UnmarshalYAML(&raw), ErrInvalidFilter)
 }
 
 func TestUnmarshalYaml(t *testing.T) {

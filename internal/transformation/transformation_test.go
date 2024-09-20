@@ -2,44 +2,42 @@ package transformation
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
 	"github.com/shoenig/test/must"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
+	"github.com/binarymatt/optimus/mocks"
 )
 
 func TestNew(t *testing.T) {
-
-	tr := New("test_name", nil)
-	must.Eq(t, "test_name", tr.Name)
-	must.Nil(t, tr.transformer)
-	transform := func(ctx context.Context, _ *optimusv1.LogEvent) (*optimusv1.LogEvent, error) {
-		return nil, nil
-	}
-	tr = New("test_name", transform)
-	must.NotNil(t, tr.transformer)
+	mocked := mocks.NewMockTransformerImpl(t)
+	tr := New("test_name", "test", []string{}, nil)
+	must.Eq(t, "test_name", tr.ID)
+	must.Nil(t, tr.impl)
+	tr = New("test_name", "test", []string{}, mocked)
+	must.NotNil(t, tr.impl)
 }
 
 func TestProcess_HappyPath(t *testing.T) {
-	transformed := false
-	transform := func(ctx context.Context, evt *optimusv1.LogEvent) (*optimusv1.LogEvent, error) {
-		fmt.Println("transoforming")
-		transformed = true
-		return evt, nil
-	}
+	mocked := mocks.NewMockTransformerImpl(t)
 	ctx, cancel := context.WithCancel(context.Background())
-	tr := New("test_name", transform)
-	_ = tr.Init()
+	tr := New("test_name", "test", []string{}, mocked)
+	mocked.EXPECT().Initialize().Return(nil)
+	_, _ = tr.Init("test_name")
 	eg := new(errgroup.Group)
 	eg.Go(func() error {
 		return tr.Process(ctx)
 	})
+	data, err := structpb.NewStruct(map[string]any{})
+	mocked.On("Transform", ctx, data).Return(data, nil).Once()
+	must.NoError(t, err)
 	evt := &optimusv1.LogEvent{
-		Id: "test",
+		Id:   "test",
+		Data: data,
 	}
 	eg.Go(func() error {
 		tr.Subscriber.Signal(evt)
@@ -47,8 +45,7 @@ func TestProcess_HappyPath(t *testing.T) {
 		cancel()
 		return nil
 	})
-	err := eg.Wait()
+	err = eg.Wait()
 	must.NoError(t, err)
-	must.True(t, transformed)
 
 }

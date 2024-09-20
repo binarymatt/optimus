@@ -13,6 +13,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
+	"github.com/binarymatt/optimus/mocks"
 )
 
 type TestProcessor struct {
@@ -53,24 +54,20 @@ func TestInit(t *testing.T) {
 
 func TestInit_Error(t *testing.T) {
 	testErr := errors.New("oops")
+	mockImpl := mocks.NewMockDestinationProcessor(t)
 	d := &Destination{
-		Initialize: func() error {
-			return testErr
-		},
+		impl: mockImpl,
 	}
+	mockImpl.EXPECT().Setup().Return(testErr)
 	err := d.Init("testing")
 	must.ErrorIs(t, testErr, err)
 }
 
 func TestWithProcessor(t *testing.T) {
 	d := &Destination{}
-	must.Nil(t, d.Initialize)
-	must.Nil(t, d.process)
-	must.Nil(t, d.closer)
+	must.Nil(t, d.impl)
 	d.WithProcessor(&TestProcessor{})
-	must.NotNil(t, d.Initialize)
-	must.NotNil(t, d.process)
-	must.NotNil(t, d.closer)
+	must.NotNil(t, d.impl)
 }
 
 func TestProcess(t *testing.T) {
