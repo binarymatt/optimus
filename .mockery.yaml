@@ -4,6 +4,18 @@ dir: "mocks/"
 mockname: "Mock{{.InterfaceName}}"
 outpkg: "mocks"
 packages:
+  github.com/binarymatt/optimus/internal/destination:
+    config:
+      all: true
+  github.com/binarymatt/optimus/internal/input:
+    config:
+      all: true
+  github.com/binarymatt/optimus/internal/transformation:
+    config:
+      all: true
+  github.com/binarymatt/optimus/internal/filter:
+    config:
+      all: true
   github.com/binarymatt/optimus/internal/pubsub:
     # place your package-specific config here
     config:
