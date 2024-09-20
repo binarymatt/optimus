@@ -25,6 +25,7 @@ func TestJmesTransformer_HappyPath(t *testing.T) {
 	jt := &JmesTransformer{
 		Expression: `locations[?state == 'WA'].name | sort(@) | {cities: join(', ', @)}`,
 	}
+	must.NoError(t, jt.Initialize())
 	var inputMap map[string]any
 	must.NoError(t, json.Unmarshal([]byte(simpleJmesData), &inputMap))
 	inputStruct, err := structpb.NewStruct(inputMap)
@@ -43,6 +44,7 @@ func TestJmespath_NonStructOutput(t *testing.T) {
 	jt := &JmesTransformer{
 		Expression: "a",
 	}
+	must.NoError(t, jt.Initialize())
 	inputStruct, err := structpb.NewStruct(map[string]any{
 		"a": "foo", "b": "bar", "c": "baz",
 	})

@@ -38,7 +38,7 @@ func (b *broker) Broadcast(event *optimusv1.LogEvent) {
 	// broadcast message to all topics.
 	event.Upstreams = append(event.Upstreams, b.id)
 	for _, s := range b.subscribers {
-		slog.Debug("sending to subscriber", "id", s.GetID())
+		slog.Info("sending to subscriber", "id", s.GetID())
 		go func(s Subscriber) {
 			s.Signal(event)
 		}(s)

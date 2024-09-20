@@ -6,44 +6,28 @@ import (
 	"time"
 
 	"github.com/shoenig/test/must"
-	"github.com/stretchr/testify/mock"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
+	"github.com/binarymatt/optimus/mocks"
 )
 
-type MockedTransformer struct {
-	mock.Mock
-}
-
-func (m *MockedTransformer) Transform(ctx context.Context, data *structpb.Struct) (*structpb.Struct, error) {
-	args := m.Called(ctx, data)
-	newData := args.Get(0).(*structpb.Struct)
-	return newData, args.Error(1)
-}
-func setupTransformer(t *testing.T) *MockedTransformer {
-
-	transformer := new(MockedTransformer)
-	t.Cleanup(func() {
-		transformer.AssertExpectations(t)
-	})
-	return transformer
-}
 func TestNew(t *testing.T) {
-	mocked := setupTransformer(t)
-	tr := New("test_name", nil)
-	must.Eq(t, "test_name", tr.Name)
-	must.Nil(t, tr.transformer)
-	tr = New("test_name", mocked.Transform)
-	must.NotNil(t, tr.transformer)
+	mocked := mocks.NewMockTransformerImpl(t)
+	tr := New("test_name", "test", []string{}, nil)
+	must.Eq(t, "test_name", tr.ID)
+	must.Nil(t, tr.impl)
+	tr = New("test_name", "test", []string{}, mocked)
+	must.NotNil(t, tr.impl)
 }
 
 func TestProcess_HappyPath(t *testing.T) {
-	mocked := setupTransformer(t)
+	mocked := mocks.NewMockTransformerImpl(t)
 	ctx, cancel := context.WithCancel(context.Background())
-	tr := New("test_name", mocked.Transform)
-	_ = tr.Init()
+	tr := New("test_name", "test", []string{}, mocked)
+	mocked.EXPECT().Initialize().Return(nil)
+	_, _ = tr.Init("test_name")
 	eg := new(errgroup.Group)
 	eg.Go(func() error {
 		return tr.Process(ctx)

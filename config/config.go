@@ -18,11 +18,11 @@ type Config struct {
 	MetricsEnabled   bool   `yaml:"metrics_enabled"`
 	LogLevel         string `yaml:"log_level"`
 	HttpInputEnabled bool
-	ListenAddress    string                              `yaml:"listen_address"`
-	Inputs           map[string]*input.Input             `yaml:"inputs"`
-	Filters          map[string]*filter.Filter           `yaml:"filters"`
-	Destinations     map[string]*destination.Destination `yaml:"destinations"`
-	Transformations  map[string]*transformation.Transformation
+	ListenAddress    string                                    `yaml:"listen_address"`
+	Inputs           map[string]*input.Input                   `yaml:"inputs"`
+	Filters          map[string]*filter.Filter                 `yaml:"filters"`
+	Destinations     map[string]*destination.Destination       `yaml:"destinations"`
+	Transformations  map[string]*transformation.Transformation `yaml:"transformations"`
 }
 
 func LoadYamlFromFile(path string) (*Config, error) {
@@ -34,7 +34,12 @@ func LoadYamlFromFile(path string) (*Config, error) {
 }
 
 func LoadYaml(data []byte) (*Config, error) {
-	cfg := Config{}
+	cfg := Config{
+		Inputs:          make(map[string]*input.Input),
+		Filters:         make(map[string]*filter.Filter),
+		Destinations:    make(map[string]*destination.Destination),
+		Transformations: make(map[string]*transformation.Transformation),
+	}
 	err := yaml.Unmarshal(data, &cfg)
 	return &cfg, err
 }
@@ -44,39 +49,71 @@ func (c *Config) Init() {
 		c.ListenAddress = ":8080"
 	}
 }
+func WithListenAddress(address string) ConfigOption {
+	return func(c *Config) {
+		c.ListenAddress = address
+		c.HttpInputEnabled = true
+	}
+}
+
+func WithMetricsEnabled() ConfigOption {
+	return func(c *Config) {
+		c.MetricsEnabled = true
+	}
+}
+
+func WithInput(id, kind string, impl input.InputProcessor) ConfigOption {
+	return func(c *Config) {
+		c.Inputs[id] = input.New(id, kind, impl)
+		if kind == "http" {
+			c.HttpInputEnabled = true
+		}
+	}
+}
+func WithDestination(id, kind string, subscriptions []string, impl destination.DestinationProcessor) ConfigOption {
+	return func(c *Config) {
+		c.Destinations[id] = destination.New(id, kind, subscriptions, impl)
+	}
+}
+func WithFilter(id, kind string, subscriptions []string, impl filter.FilterProcessor) ConfigOption {
+	return func(c *Config) {
+		c.Filters[id] = filter.New(id, kind, subscriptions, impl)
+	}
+}
 
 func WithChannelInput(name string, in <-chan *optimusv1.LogEvent) ConfigOption {
 	return func(c *Config) {
 		ci := &input.ChannelInput{
 			Input: in,
 		}
-		i := &input.Input{
-			ID:   name,
-			Kind: "channel",
-		}
-		i.WithInputProcessor(ci)
-		c.Inputs[name] = i
+		c.Inputs[name] = input.New(name, "channel", ci)
 	}
 }
 
-func WithChannelOutput(name string, out chan<- *optimusv1.LogEvent) ConfigOption {
+func WithChannelOutput(name string, out chan<- *optimusv1.LogEvent, subscriptions []string) ConfigOption {
 	return func(c *Config) {
 		cd := &destination.ChannelDestination{
 			Output: out,
 		}
-		destination := &destination.Destination{
-			Kind: "channel",
-		}
-		destination.WithProcessor(cd)
-		c.Destinations[name] = destination
+		c.Destinations[name] = destination.New(name, "channel", subscriptions, cd)
 	}
 }
 
-func WithTransformer(name string, transformer transformation.Transformer) ConfigOption {
+func WithTransformer(id, kind string, subscriptions []string, transformer transformation.TransformerImpl) ConfigOption {
 	return func(c *Config) {
-		t := transformation.New(name, transformer)
-		c.Transformations[name] = t
+		t := transformation.New(id, kind, subscriptions, transformer)
+		c.Transformations[id] = t
 	}
+}
+func NewWithYaml(yaml []byte, opts ...ConfigOption) (*Config, error) {
+	cfg, err := LoadYaml(yaml)
+	if err != nil {
+		return nil, err
+	}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+	return cfg, nil
 }
 func New(opts ...ConfigOption) *Config {
 	c := &Config{

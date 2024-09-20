@@ -32,31 +32,29 @@ type Destination struct {
 	Subscriptions []string `yaml:"subscriptions"`
 	Subscriber    pubsub.Subscriber
 	inputs        chan *optimusv1.LogEvent
-	process       Deliverer
-	Initialize    Initializer
-	closer        Closer
+	//process       Deliverer
+	//Initialize    Initializer
+	//closer        Closer
+	impl DestinationProcessor
 	// InternalConfig map[string]any `yaml:",inline"`
 }
 
-func (d *Destination) WithProcessor(internal DestinationProcessor) {
-	slog.Info("setting up processor", "id", d.ID, "kind", d.Kind)
-	d.process = internal.Deliver
-	d.Initialize = internal.Setup
-	d.closer = internal.Close
+func New(id, kind string, subscriptions []string, impl DestinationProcessor) *Destination {
+	d := &Destination{
+		ID:            id,
+		Kind:          kind,
+		Subscriptions: subscriptions,
+	}
+	d.WithProcessor(impl)
+	return d
 }
+
+func (d *Destination) WithProcessor(impl DestinationProcessor) {
+	slog.Info("setting up processor", "id", d.ID, "kind", d.Kind)
+	d.impl = impl
+}
+
 func (d *Destination) UnmarshalYAML(n *yaml.Node) error {
-	/*
-		for i := 0; i < len(n.Content)/2; i += 2 {
-			key := n.Content[i]
-			value := n.Content[i+1]
-			if key.Kind == yaml.ScalarNode && key.Value == "kind" {
-				if value.Kind != yaml.ScalarNode {
-					return errors.New("kind is not scalar")
-				}
-				d.Kind = value.Value
-			}
-		}
-	*/
 	type alias Destination
 	tmp := (*alias)(d)
 	if err := n.Decode(&tmp); err != nil {
@@ -106,12 +104,12 @@ func (d *Destination) Init(id string) error {
 	if d.Subscriber == nil {
 		d.Subscriber = pubsub.NewSubscriber(d.ID, d.inputs)
 	}
-	return d.Initialize()
+	return d.impl.Setup()
 }
 
 func (d *Destination) Process(ctx context.Context) {
 	defer func() {
-		if err := d.closer(); err != nil {
+		if err := d.impl.Close(); err != nil {
 			slog.ErrorContext(ctx, "close destination error", "error", err, "id", d.ID, "kind", d.Kind)
 		}
 	}()
@@ -121,8 +119,8 @@ func (d *Destination) Process(ctx context.Context) {
 			slog.InfoContext(ctx, "context is done, shutting down destination event loop", "id", d.ID, "kind", d.Kind)
 			return
 		case event := <-d.inputs:
-			slog.Debug("delivering event", "event", event, "deliverer", d.process)
-			err := d.process(ctx, event)
+			slog.Debug("delivering event", "event", event, "kind", d.Kind, "id", d.ID)
+			err := d.impl.Deliver(ctx, event)
 			if err != nil {
 				slog.Error("error delivering record", "error", err)
 			}

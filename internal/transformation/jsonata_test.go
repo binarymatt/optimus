@@ -44,6 +44,7 @@ func TestJsonNataTransformer_HappyPath(t *testing.T) {
 	jt := &JsonataTransformer{
 		Expression: simpleExpression,
 	}
+	must.NoError(t, jt.Initialize())
 	newS, err := jt.Transform(ctx, s)
 	must.NoError(t, err)
 	must.Eq(t, expected, newS, testutil.CmpTransform)
@@ -59,6 +60,7 @@ func TestJsonNataTransfomer_NonStructOutput(t *testing.T) {
 	jt := &JsonataTransformer{
 		Expression: `$sum(orders.(price * quantity))`,
 	}
+	must.NoError(t, jt.Initialize())
 
 	newS, err := jt.Transform(ctx, s)
 	must.ErrorIs(t, ErrNotAMap, err)
@@ -66,17 +68,10 @@ func TestJsonNataTransfomer_NonStructOutput(t *testing.T) {
 }
 
 func TestJsonNataTransformer_BadExpression(t *testing.T) {
-
-	ctx := context.Background()
-	var i map[string]any
-	s, err := structpb.NewStruct(i)
-	must.NoError(t, err)
 	jt := &JsonataTransformer{
 		Expression: `.Orders`,
 	}
-	newS, err := jt.Transform(ctx, s)
-	must.Error(t, err)
-	must.Nil(t, newS)
+	must.Error(t, jt.Initialize())
 }
 func TestJsonNataTransformer_EmptyResult(t *testing.T) {
 
@@ -89,8 +84,10 @@ func TestJsonNataTransformer_EmptyResult(t *testing.T) {
 	jt := &JsonataTransformer{
 		Expression: `Orders`,
 	}
+	must.NoError(t, jt.Initialize())
 	newS, err := jt.Transform(ctx, s)
 	must.NoError(t, err)
-	must.Eq(t, &structpb.Struct{}, newS, testutil.CmpTransform)
+	must.Nil(t, newS)
+	// must.Eq(t, &structpb.Struct{}, newS, testutil.CmpTransform)
 
 }

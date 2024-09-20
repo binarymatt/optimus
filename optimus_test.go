@@ -11,6 +11,7 @@ import (
 	"github.com/binarymatt/optimus/internal/filter"
 	"github.com/binarymatt/optimus/internal/input"
 	"github.com/binarymatt/optimus/internal/pubsub"
+	"github.com/binarymatt/optimus/mocks"
 )
 
 func TestNew(t *testing.T) {
@@ -71,12 +72,10 @@ func TestSetup_Filters(t *testing.T) {
 }
 func TestSetup_Destinations(t *testing.T) {
 	cfg := config.New()
-	cfg.Destinations["test"] = &destination.Destination{
-		Kind: "http",
-		Initialize: func() error {
-			return nil
-		},
-	}
+	mockDestImpl := mocks.NewMockDestinationProcessor(t)
+	mockDestImpl.EXPECT().Setup().Return(nil)
+	d := destination.New("test", "http", []string{}, mockDestImpl)
+	cfg.Destinations["test"] = d
 	o := &Optimus{
 		cfg:     cfg,
 		parents: make(map[string]pubsub.Broker),
@@ -87,12 +86,10 @@ func TestSetup_Destinations(t *testing.T) {
 func TestSetup_DestinationError(t *testing.T) {
 	cfg := config.New()
 	errOops := errors.New("oops")
-	cfg.Destinations["test"] = &destination.Destination{
-		Kind: "http",
-		Initialize: func() error {
-			return errOops
-		},
-	}
+	mockDestImpl := mocks.NewMockDestinationProcessor(t)
+	mockDestImpl.EXPECT().Setup().Return(errOops)
+	d := destination.New("test", "http", []string{}, mockDestImpl)
+	cfg.Destinations["test"] = d
 	o := &Optimus{
 		cfg:     cfg,
 		parents: make(map[string]pubsub.Broker),

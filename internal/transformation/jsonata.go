@@ -3,6 +3,7 @@ package transformation
 import (
 	"context"
 	"errors"
+	"log/slog"
 
 	"github.com/blues/jsonata-go"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -14,17 +15,19 @@ var (
 
 type JsonataTransformer struct {
 	Expression string `yaml:"expression"`
+	expr       *jsonata.Expr
 }
 
+func (jt *JsonataTransformer) Initialize() (err error) {
+	jt.expr, err = jsonata.Compile(jt.Expression)
+	return
+}
 func (jt *JsonataTransformer) Transform(ctx context.Context, data *structpb.Struct) (*structpb.Struct, error) {
-	expr, err := jsonata.Compile(jt.Expression)
-	if err != nil {
-		return nil, err
-	}
-	raw, err := expr.Eval(data.AsMap())
+	slog.Warn("starting jsonata transformation")
+	raw, err := jt.expr.Eval(data.AsMap())
 	if err != nil {
 		if errors.Is(err, jsonata.ErrUndefined) {
-			return &structpb.Struct{}, nil
+			return nil, nil
 		}
 		return nil, err
 	}
@@ -32,5 +35,6 @@ func (jt *JsonataTransformer) Transform(ctx context.Context, data *structpb.Stru
 	if !ok {
 		return nil, ErrNotAMap
 	}
+	slog.Warn("passing back new struct")
 	return structpb.NewStruct(newM)
 }
