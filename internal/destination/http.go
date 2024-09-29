@@ -26,11 +26,11 @@ type Header struct {
 }
 type HttpDestination struct {
 	client   *retryablehttp.Client
-	Timeout  int      `hcl:"timeout"`
-	Retries  int      `hcl:"retries"`
+	Timeout  int      `hcl:"timeout,optional"`
+	Retries  int      `hcl:"retries,optional"`
 	Endpoint string   `hcl:"endpoint"`
-	Method   string   `hcl:"http_method"`
-	Headers  []Header `hcl:"headers"`
+	Method   string   `hcl:"http_method,optional"`
+	Headers  []Header `hcl:"headers,optional"`
 }
 
 func (h *HttpDestination) Setup() error {
