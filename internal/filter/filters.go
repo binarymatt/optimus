@@ -26,7 +26,6 @@ type FilterProcessor interface {
 	Process(context.Context, *optimusv1.LogEvent) (*optimusv1.LogEvent, error)
 	Setup() error
 }
-type FilterFunc = func(context.Context, *optimusv1.LogEvent) (*optimusv1.LogEvent, error)
 type Filter struct {
 	ID            string
 	Broker        pubsub.Broker
