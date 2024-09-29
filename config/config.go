@@ -108,6 +108,7 @@ func LoadHCL(fileName string, data []byte) (*Config, error) {
 	}
 	for _, fltr := range config.Filters {
 		impl, more := filter.HclImpl(fltr.Kind, ctx, fltr.Body)
+		diags = append(diags, more...)
 		if more.HasErrors() {
 			continue
 		}
@@ -115,6 +116,7 @@ func LoadHCL(fileName string, data []byte) (*Config, error) {
 	}
 	for _, tr := range config.Transformations {
 		impl, more := transformation.HclImpl(tr.Kind, tr.Body)
+		diags = append(diags, more...)
 		if more.HasErrors() {
 			continue
 		}
@@ -122,6 +124,7 @@ func LoadHCL(fileName string, data []byte) (*Config, error) {
 	}
 	for _, d := range config.Destinations {
 		impl, more := destination.HclImpl(d.Kind, d.Body)
+		diags = append(diags, more...)
 		if more.HasErrors() {
 			continue
 		}
