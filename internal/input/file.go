@@ -17,7 +17,7 @@ import (
 
 type FileInput struct {
 	id      string
-	Path    string `hcl:"path,attribute"`
+	Path    string `hcl:"path"`
 	tracker *tail.TailTracker
 }
 

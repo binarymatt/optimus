@@ -12,12 +12,15 @@ import (
 	"github.com/binarymatt/optimus/internal/pubsub"
 )
 
+const (
+	KindFile = "file"
+	KindHttp = "http"
+)
+
 var (
 	ErrInvalidInput = errors.New("invalid input config")
 )
 
-type Processor = func(context.Context) error
-type Initializer = func(id string, broker pubsub.Broker) error
 type InputProcessor interface {
 	Initialize(id string, broker pubsub.Broker) error
 	Process(context.Context) error
@@ -57,15 +60,15 @@ func HclImpl(kind string, ctx *hcl.EvalContext, body hcl.Body) (InputProcessor, 
 	slog.Debug("setting up input implementation")
 	var impl InputProcessor
 	switch kind {
-	case "file":
+	case KindFile:
 		impl = &FileInput{}
-	case "http":
+	case KindHttp:
 		impl = &HTTPInput{}
 	default:
 		diags := hcl.Diagnostics{}
 		diags = append(diags, &hcl.Diagnostic{
 			Severity: hcl.DiagError,
-			Summary:  "invalid input type",
+			Summary:  "invalid input",
 			Detail:   fmt.Sprintf("%s is not a valid input type", kind),
 		})
 		return nil, diags
