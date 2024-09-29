@@ -108,9 +108,6 @@ func Run(cctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	o, err := optimus.New(cfg)
-	if err != nil {
-		return err
-	}
+	o := optimus.New(cfg)
 	return o.Run(ctx)
 }

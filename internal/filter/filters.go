@@ -6,10 +6,16 @@ import (
 	"fmt"
 	"log/slog"
 
-	"gopkg.in/yaml.v3"
+	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/gohcl"
 
 	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
 	"github.com/binarymatt/optimus/internal/pubsub"
+)
+
+const (
+	KindBexpr   = "bexpr"
+	KindQuamina = "quamina"
 )
 
 var (
@@ -18,86 +24,51 @@ var (
 
 type FilterProcessor interface {
 	Process(context.Context, *optimusv1.LogEvent) (*optimusv1.LogEvent, error)
+	Setup() error
 }
 type FilterFunc = func(context.Context, *optimusv1.LogEvent) (*optimusv1.LogEvent, error)
 type Filter struct {
-	id            string
+	ID            string
 	Broker        pubsub.Broker
 	Subscriber    pubsub.Subscriber
 	inputs        chan *optimusv1.LogEvent
-	process       FilterFunc
-	Kind          string   `yaml:"kind"`
-	Subscriptions []string `yaml:"subscriptions"`
-	BufferSize    int      `yaml:"buffer_size"`
+	impl          FilterProcessor
+	Kind          string
+	Subscriptions []string
+	BufferSize    int
 }
 
-func New(id, kind string, subscriptions []string, impl FilterProcessor) *Filter {
-	return &Filter{
-		id:      id,
-		Kind:    kind,
-		process: impl.Process,
+func New(id, kind string, subscriptions []string, impl FilterProcessor) (*Filter, error) {
+	f := &Filter{
+		ID:            id,
+		Kind:          kind,
+		impl:          impl,
+		Subscriptions: subscriptions,
 	}
+	_, err := f.Init()
+	return f, err
 }
 
-func (f *Filter) Init(id string) pubsub.Broker {
-	f.id = id
+func (f *Filter) Init() (pubsub.Broker, error) {
 	if f.BufferSize == 0 {
 		f.BufferSize = 5
 	}
-	f.Broker = pubsub.NewBroker(f.id)
+	f.Broker = pubsub.NewBroker(f.ID)
 	f.inputs = make(chan *optimusv1.LogEvent, f.BufferSize)
-	f.Subscriber = pubsub.NewSubscriber(f.id, f.inputs)
-	return f.Broker
-}
-func (f *Filter) SetupInternal() error {
-	return nil
-}
-func (f *Filter) UnmarshalYAML(n *yaml.Node) error {
-	type alias Filter
-	tmp := (*alias)(f)
-	if err := n.Decode(&tmp); err != nil {
-		slog.Error("inside top level decode", "error", err)
-		return err
-	}
-	f.Kind = tmp.Kind
-	f.Subscriptions = tmp.Subscriptions
-	f.BufferSize = tmp.BufferSize
-	switch f.Kind {
-	case "bexpr":
-		var bFilter BexprFilter
-		if err := n.Decode(&bFilter); err != nil {
-			fmt.Println(err)
-			return err
-		}
-		if err := bFilter.Setup(); err != nil {
-			fmt.Println("error during setup")
-			return err
-		}
-		f.process = bFilter.Process
-	case "quamina":
-		var qFilter QuaminaFilter
-		if err := n.Decode(&qFilter); err != nil {
-			return err
-		}
-		if err := qFilter.Setup(); err != nil {
-			return err
-		}
-		f.process = qFilter.Process
-	default:
-		return ErrInvalidFilter
-	}
-	return nil
+	f.Subscriber = pubsub.NewSubscriber(f.ID, f.inputs)
+
+	return f.Broker, f.impl.Setup()
 }
 
 func (f *Filter) Process(ctx context.Context) error {
-	slog.Debug("starting filter loop", "id", f.id, "type", f.Kind)
+	slog.Debug("starting filter loop", "id", f.ID, "type", f.Kind)
 	for {
 		select {
 		case <-ctx.Done():
 			slog.Info("context is done, shutting down filter event loop")
 			return nil
 		case event := <-f.inputs:
-			newEvent, err := f.process(ctx, event)
+			newEvent, err := f.impl.Process(ctx, event)
 			if err != nil {
 				slog.Error("error delivering record - TODO What now with this record", "error", err)
 				continue
@@ -109,5 +80,23 @@ func (f *Filter) Process(ctx context.Context) error {
 
 		}
 	}
+}
+func HclImpl(kind string, ctx *hcl.EvalContext, body hcl.Body) (FilterProcessor, hcl.Diagnostics) {
+	var impl FilterProcessor
+	switch kind {
+	case KindBexpr:
+		impl = &BexprFilter{}
+	case KindQuamina:
+		impl = &QuaminaFilter{}
+	default:
+		diags := hcl.Diagnostics{}
+		diags = diags.Append(&hcl.Diagnostic{
+			Severity: hcl.DiagError,
+			Summary:  "invalid filter",
+			Detail:   fmt.Sprintf("%s is not a valid filter type.", kind),
+		})
+		return nil, diags
+	}
+	return impl, gohcl.DecodeBody(body, ctx, impl)
 
 }

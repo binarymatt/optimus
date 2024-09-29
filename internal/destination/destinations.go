@@ -6,11 +6,19 @@ import (
 	"fmt"
 	"log/slog"
 
-	"gopkg.in/yaml.v3"
+	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/gohcl"
 
 	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
 	"github.com/binarymatt/optimus/internal/metrics"
 	"github.com/binarymatt/optimus/internal/pubsub"
+)
+
+const (
+	KindHttp    = "http"
+	KindFile    = "file"
+	KindStdOut  = "stdout"
+	KindChannel = "channel"
 )
 
 var (
@@ -27,26 +35,22 @@ type DestinationProcessor interface {
 }
 type Destination struct {
 	ID            string
-	Kind          string   `yaml:"kind"`
-	BufferSize    int      `yaml:"buffer_size"`
-	Subscriptions []string `yaml:"subscriptions"`
+	Kind          string
+	BufferSize    int
+	Subscriptions []string
 	Subscriber    pubsub.Subscriber
 	inputs        chan *optimusv1.LogEvent
-	//process       Deliverer
-	//Initialize    Initializer
-	//closer        Closer
-	impl DestinationProcessor
-	// InternalConfig map[string]any `yaml:",inline"`
+	impl          DestinationProcessor
 }
 
-func New(id, kind string, subscriptions []string, impl DestinationProcessor) *Destination {
+func New(id, kind string, subscriptions []string, impl DestinationProcessor) (*Destination, error) {
 	d := &Destination{
 		ID:            id,
 		Kind:          kind,
 		Subscriptions: subscriptions,
 	}
 	d.WithProcessor(impl)
-	return d
+	return d, d.Init(id)
 }
 
 func (d *Destination) WithProcessor(impl DestinationProcessor) {
@@ -54,46 +58,7 @@ func (d *Destination) WithProcessor(impl DestinationProcessor) {
 	d.impl = impl
 }
 
-func (d *Destination) UnmarshalYAML(n *yaml.Node) error {
-	type alias Destination
-	tmp := (*alias)(d)
-	if err := n.Decode(&tmp); err != nil {
-		return err
-	}
-
-	d.Kind = tmp.Kind
-	d.Subscriptions = tmp.Subscriptions
-	d.BufferSize = tmp.BufferSize
-	var internal DestinationProcessor
-	switch d.Kind {
-	case "stdout":
-		var std StdOutDestination
-		if err := n.Decode(&std); err != nil {
-			return err
-		}
-		internal = &std
-	case "http":
-		var hout HttpDestination
-		if err := n.Decode(&hout); err != nil {
-			return err
-		}
-		internal = &hout
-	case "file":
-		var fout FileDestination
-		if err := n.Decode(&fout); err != nil {
-			return err
-		}
-		internal = &fout
-	}
-	if internal == nil {
-		return ErrNoProcessor
-	}
-	d.WithProcessor(internal)
-	return nil
-}
-
 func (d *Destination) Init(id string) error {
-	d.ID = id
 	slog.Info("initializaing destination", "id", d.ID, "subscriptions", d.Subscriptions, "kind", d.Kind)
 	if d.BufferSize == 0 {
 		d.BufferSize = 5
@@ -128,4 +93,23 @@ func (d *Destination) Process(ctx context.Context) {
 		}
 	}
 
+}
+func HclImpl(kind string, body hcl.Body) (DestinationProcessor, hcl.Diagnostics) {
+	var impl DestinationProcessor
+	switch kind {
+	case KindFile:
+		impl = &FileDestination{}
+	case KindHttp:
+		impl = &HttpDestination{}
+	case KindStdOut:
+		impl = &StdOutDestination{}
+	default:
+		diags := append(hcl.Diagnostics{}, &hcl.Diagnostic{
+			Severity: hcl.DiagError,
+			Summary:  "invalid destination",
+			Detail:   fmt.Sprintf("%s is not a valid destination type", kind),
+		})
+		return nil, diags
+	}
+	return impl, gohcl.DecodeBody(body, nil, impl)
 }

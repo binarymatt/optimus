@@ -78,6 +78,47 @@ func (_c *MockFilterProcessor_Process_Call) RunAndReturn(run func(context.Contex
 	return _c
 }
 
+// Setup provides a mock function with given fields:
+func (_m *MockFilterProcessor) Setup() error {
+	ret := _m.Called()
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockFilterProcessor_Setup_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Setup'
+type MockFilterProcessor_Setup_Call struct {
+	*mock.Call
+}
+
+// Setup is a helper method to define mock.On call
+func (_e *MockFilterProcessor_Expecter) Setup() *MockFilterProcessor_Setup_Call {
+	return &MockFilterProcessor_Setup_Call{Call: _e.mock.On("Setup")}
+}
+
+func (_c *MockFilterProcessor_Setup_Call) Run(run func()) *MockFilterProcessor_Setup_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockFilterProcessor_Setup_Call) Return(_a0 error) *MockFilterProcessor_Setup_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockFilterProcessor_Setup_Call) RunAndReturn(run func() error) *MockFilterProcessor_Setup_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 type mockConstructorTestingTNewMockFilterProcessor interface {
 	mock.TestingT
 	Cleanup(func())

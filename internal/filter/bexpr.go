@@ -11,7 +11,7 @@ import (
 )
 
 type BexprFilter struct {
-	Expression string `yaml:"expression"`
+	Expression string `hcl:"expression"`
 	evaluator  *bexpr.Evaluator
 }
 

@@ -7,9 +7,9 @@ import (
 	"github.com/shoenig/test/must"
 	"github.com/stretchr/testify/mock"
 	"golang.org/x/net/context"
-	"gopkg.in/yaml.v3"
 
 	"github.com/binarymatt/optimus/internal/pubsub"
+	"github.com/binarymatt/optimus/mocks"
 )
 
 type MockedProcessor struct {
@@ -29,73 +29,53 @@ func (m *MockedInitializer) Initialize(id string, broker pubsub.Broker) error {
 	args := m.Called(id, broker)
 	return args.Error(0)
 }
-func setupInput(t *testing.T) (*Input, *MockedInitializer, *MockedProcessor) {
 
-	processor := new(MockedProcessor)
-	initializer := new(MockedInitializer)
-	t.Cleanup(func() {
-		processor.AssertExpectations(t)
-		initializer.AssertExpectations(t)
-	})
-	return &Input{
-		Processor:  processor.Process,
-		Initialize: initializer.Initialize,
-	}, initializer, processor
-}
 func TestProcess(t *testing.T) {
-	i, _, processor := setupInput(t)
+	mocked := mocks.NewMockInputProcessor(t)
+	i := &Input{
+		impl: mocked,
+	}
 	ctx := context.Background()
-	processor.On("Process", ctx).Return(nil).Once()
+	mocked.EXPECT().Process(ctx).Return(nil).Once()
 	must.NoError(t, i.Process(ctx))
 }
 
 func TestProcess_Error(t *testing.T) {
-	i, _, processor := setupInput(t)
+	mocked := mocks.NewMockInputProcessor(t)
+	i := &Input{
+		impl: mocked,
+	}
 	ctx := context.Background()
 	errOops := errors.New("oops")
-	processor.On("Process", ctx).Return(errOops).Once()
+	mocked.EXPECT().Process(ctx).Return(errOops).Once()
 	must.ErrorIs(t, errOops, i.Process(ctx))
 }
 
 func TestInit(t *testing.T) {
-	i, init, _ := setupInput(t)
-	init.On("Initialize", "testid", mock.AnythingOfType("*pubsub.broker")).Return(nil).Once()
-	b, err := i.Init("testid")
+	mocked := mocks.NewMockInputProcessor(t)
+	i := &Input{
+		ID:   "testid",
+		impl: mocked,
+	}
+	mocked.EXPECT().
+		Initialize("testid", mock.AnythingOfType("*pubsub.broker")).
+		Return(nil).Once()
+	b, err := i.Init()
 	must.NotNil(t, b)
 	must.NoError(t, err)
 }
 
 func TestInit_Error(t *testing.T) {
-	i, init, _ := setupInput(t)
+	mocked := mocks.NewMockInputProcessor(t)
+	i := &Input{
+		ID:   "testid",
+		impl: mocked,
+	}
 	errOops := errors.New("oops")
-	init.On("Initialize", "testid", mock.AnythingOfType("*pubsub.broker")).Return(errOops).Once()
-	b, err := i.Init("testid")
+	mocked.EXPECT().
+		Initialize("testid", mock.AnythingOfType("*pubsub.broker")).
+		Return(errOops).Once()
+	b, err := i.Init()
 	must.Nil(t, b)
 	must.ErrorIs(t, errOops, err)
-}
-
-var data = `---
-kind: http
-`
-var dataErr = `---
-kind: unknown
-`
-
-func TestUnmarshalYAML(t *testing.T) {
-	i, _, _ := setupInput(t)
-	var raw yaml.Node
-	err := yaml.Unmarshal([]byte(data), &raw)
-	must.NoError(t, err)
-	err = i.UnmarshalYAML(&raw)
-	must.NoError(t, err)
-	must.NotNil(t, i.Processor)
-	must.NotNil(t, i.Initialize)
-}
-func TestUnmarshalYAML_Error(t *testing.T) {
-	i, _, _ := setupInput(t)
-	var raw yaml.Node
-	err := yaml.Unmarshal([]byte(dataErr), &raw)
-	must.NoError(t, err)
-	err = i.UnmarshalYAML(&raw)
-	must.ErrorIs(t, ErrInvalidInput, err)
 }

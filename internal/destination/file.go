@@ -13,7 +13,7 @@ import (
 )
 
 type FileDestination struct {
-	Path string `yaml:"path"`
+	Path string `hcl:"path"`
 	w    io.Writer
 	f    *os.File
 }

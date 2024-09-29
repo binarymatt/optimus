@@ -43,16 +43,17 @@ func main() {
 	defer cancel()
 	eg, ctx := errgroup.WithContext(ctx)
 	slog.Warn("loading config")
-	cfg, err := config.LoadYamlFromFile("sample_config.yaml")
+	rawCfg, err := os.ReadFile("sample_config.hcl")
+	if err != nil {
+		return
+	}
+	cfg, err := config.LoadHCL("sample_config.hcl", rawCfg)
 	if err != nil {
 		return
 	}
 	c := make(chan *optimusv1.LogEvent)
 	config.WithChannelInput("testing", c)(cfg)
-	o, err := optimus.New(cfg)
-	if err != nil {
-		return
-	}
+	o := optimus.New(cfg)
 	eg.Go(func() error {
 		return o.Run(ctx)
 	})

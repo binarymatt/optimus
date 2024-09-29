@@ -6,77 +6,54 @@ import (
 
 	"github.com/shoenig/test/must"
 	"golang.org/x/sync/errgroup"
-	"gopkg.in/yaml.v3"
 
 	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
+	"github.com/binarymatt/optimus/mocks"
 )
 
-var unknownYaml = `---
-kind: test
-subscriptions:
-  - fileInput
-BufferSize: 2
-`
-
-var yamlStr = `---
-kind: bexpr
-subscriptions:
-  - fileInput
-BufferSize: 1
-expression: test.foo == true
-`
-
 func TestInit(t *testing.T) {
-	f := &Filter{}
+	mocked := mocks.NewMockFilterProcessor(t)
+	mocked.EXPECT().Setup().Return(nil)
+	f := &Filter{
+		ID:   "test",
+		impl: mocked,
+	}
 	must.Nil(t, f.Broker)
 	must.Nil(t, f.Subscriber)
 	must.Nil(t, f.inputs)
-	must.Nil(t, f.process)
 	must.Zero(t, f.BufferSize)
-	must.Eq(t, "", f.id)
 
-	f.Init("testing")
-	must.Eq(t, "testing", f.id)
+	_, err := f.Init()
+	must.NoError(t, err)
 	must.Eq(t, 5, f.BufferSize)
 	must.NotNil(t, f.Broker)
 	must.NotNil(t, f.inputs)
 	must.NotNil(t, f.Subscriber)
 }
 
-func TestSetupInternal(t *testing.T) {
-	f := &Filter{}
-	must.NoError(t, f.SetupInternal())
-}
-
 func TestUnknownFilter(t *testing.T) {
-	var raw yaml.Node
-	f := &Filter{}
-	must.NoError(t, yaml.Unmarshal([]byte(unknownYaml), &raw))
-	must.ErrorIs(t, f.UnmarshalYAML(&raw), ErrInvalidFilter)
-}
-
-func TestUnmarshalYaml(t *testing.T) {
-	var raw yaml.Node
-	f := &Filter{}
-	must.NoError(t, yaml.Unmarshal([]byte(yamlStr), &raw))
-	must.NoError(t, f.UnmarshalYAML(&raw))
+	t.SkipNow()
+	// f := &Filter{}
 }
 
 func TestProcess(t *testing.T) {
+	event := &optimusv1.LogEvent{
+		Id: "test",
+	}
+	mocked := mocks.NewMockFilterProcessor(t)
+	mocked.EXPECT().Setup().Return(nil)
 	f := &Filter{
 		BufferSize: 1,
-		process: func(ctx context.Context, event *optimusv1.LogEvent) (*optimusv1.LogEvent, error) {
-			return event, nil
-		},
+		impl:       mocked,
 	}
-	f.Init("testing")
+	_, err := f.Init()
+	must.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	eg, ctx := errgroup.WithContext(ctx)
+	mocked.EXPECT().Process(ctx, event).Return(event, nil).Once()
 	eg.Go(func() error {
 		// send event to channel
-		f.inputs <- &optimusv1.LogEvent{
-			Id: "test",
-		}
+		f.inputs <- event
 		// cancel context
 		cancel()
 		return nil

@@ -20,17 +20,17 @@ var (
 )
 
 type Header struct {
-	Key   string `yaml:"key"`
-	Value string `yaml:"value"`
-	Path  string `yaml:"path"`
+	Key   string `hcl:"key"`
+	Value string `hcl:"value"`
+	Path  string `hcl:"path"`
 }
 type HttpDestination struct {
 	client   *retryablehttp.Client
-	Timeout  int      `yaml:"timeout"`
-	Retries  int      `yaml:"retries"`
-	Endpoint string   `yaml:"endpoint"`
-	Method   string   `yaml:"http_method"`
-	Headers  []Header `yaml:"headers"`
+	Timeout  int      `hcl:"timeout"`
+	Retries  int      `hcl:"retries"`
+	Endpoint string   `hcl:"endpoint"`
+	Method   string   `hcl:"http_method"`
+	Headers  []Header `hcl:"headers"`
 }
 
 func (h *HttpDestination) Setup() error {

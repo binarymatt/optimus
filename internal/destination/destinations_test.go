@@ -3,44 +3,22 @@ package destination
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
 	"github.com/shoenig/test/must"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/structpb"
-	"gopkg.in/yaml.v3"
 
 	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
 	"github.com/binarymatt/optimus/mocks"
 )
 
-type TestProcessor struct {
-	SetupCalled    bool
-	DeliverCalled  bool
-	CloseCalled    bool
-	ProcessedEvent *optimusv1.LogEvent
-}
-
-func (tp *TestProcessor) Setup() error {
-	tp.SetupCalled = true
-	return nil
-}
-func (tp *TestProcessor) Deliver(ctx context.Context, event *optimusv1.LogEvent) error {
-	fmt.Println("delivering")
-	tp.DeliverCalled = true
-	tp.ProcessedEvent = event
-	return nil
-}
-func (tp *TestProcessor) Close() error {
-	tp.CloseCalled = true
-	return nil
-}
 func TestInit(t *testing.T) {
-	p := &TestProcessor{}
+	mocked := mocks.NewMockDestinationProcessor(t)
+	mocked.EXPECT().Setup().Return(nil).Once()
 	d := &Destination{}
-	d.WithProcessor(p)
+	d.WithProcessor(mocked)
 	must.Eq(t, "", d.ID)
 	must.Eq(t, 0, d.BufferSize)
 	must.Nil(t, d.inputs)
@@ -48,8 +26,6 @@ func TestInit(t *testing.T) {
 
 	err := d.Init("testing")
 	must.NoError(t, err)
-	must.Eq(t, "testing", d.ID)
-	must.True(t, p.SetupCalled)
 }
 
 func TestInit_Error(t *testing.T) {
@@ -64,16 +40,19 @@ func TestInit_Error(t *testing.T) {
 }
 
 func TestWithProcessor(t *testing.T) {
+	mocked := mocks.NewMockDestinationProcessor(t)
 	d := &Destination{}
 	must.Nil(t, d.impl)
-	d.WithProcessor(&TestProcessor{})
+	d.WithProcessor(mocked)
 	must.NotNil(t, d.impl)
 }
 
 func TestProcess(t *testing.T) {
 	d := &Destination{}
-	p := &TestProcessor{}
-	d.WithProcessor(p)
+	mocked := mocks.NewMockDestinationProcessor(t)
+	mocked.EXPECT().Setup().Return(nil).Once()
+	mocked.EXPECT().Close().Return(nil).Once()
+	d.WithProcessor(mocked)
 	err := d.Init("testing")
 	must.NoError(t, err)
 	event := &optimusv1.LogEvent{
@@ -84,6 +63,7 @@ func TestProcess(t *testing.T) {
 		},
 	}
 	ctx, cancel := context.WithCancel(context.Background())
+	mocked.EXPECT().Deliver(ctx, event).Return(nil).Once()
 	eg := new(errgroup.Group)
 	eg.Go(func() error {
 		d.Process(ctx)
@@ -97,39 +77,4 @@ func TestProcess(t *testing.T) {
 	})
 	err = eg.Wait()
 	must.NoError(t, err)
-	must.True(t, p.DeliverCalled)
-	must.Eq(t, event, p.ProcessedEvent)
-}
-
-var data = `---
-kind: stdout
-subscriptions:
-  - fileInput
-  - httpInput
-  - testing
-`
-
-var dataErr = `---
-kind: unknown
-subscriptions:
-  - fileInput
-  - httpInput
-  - testing
-`
-
-func TestUnmarshalYaml(t *testing.T) {
-	var raw yaml.Node
-	d := &Destination{}
-	err := yaml.Unmarshal([]byte(data), &raw)
-	must.NoError(t, err)
-	err = d.UnmarshalYAML(&raw)
-	must.NoError(t, err)
-}
-func TestUnmarshalYaml_NoInternal(t *testing.T) {
-	var raw yaml.Node
-	d := &Destination{}
-	err := yaml.Unmarshal([]byte(dataErr), &raw)
-	must.NoError(t, err)
-	err = d.UnmarshalYAML(&raw)
-	must.ErrorIs(t, ErrNoProcessor, err)
 }

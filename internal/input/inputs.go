@@ -3,9 +3,11 @@ package input
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 
-	"gopkg.in/yaml.v3"
+	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/gohcl"
 
 	"github.com/binarymatt/optimus/internal/pubsub"
 )
@@ -21,77 +23,54 @@ type InputProcessor interface {
 	Process(context.Context) error
 }
 type Input struct {
-	ID         string
-	Kind       string `yaml:"kind"`
-	Initialize Initializer
-	Processor  Processor
-	Broker     pubsub.Broker
+	Kind   string   `hcl:"kind,label"`
+	ID     string   `hcl:"id,label"`
+	Body   hcl.Body `hcl:",remain"`
+	impl   InputProcessor
+	Broker pubsub.Broker
 }
 
-func New(id, kind string, internal InputProcessor) *Input {
-	return &Input{
-		ID:         id,
-		Kind:       kind,
-		Processor:  internal.Process,
-		Initialize: internal.Initialize,
+func New(id, kind string, internal InputProcessor) (*Input, error) {
+	in := &Input{
+		ID:   id,
+		Kind: kind,
+		impl: internal,
 	}
+	_, err := in.Init()
+	return in, err
 }
 
 func (i *Input) Process(ctx context.Context) (err error) {
-	return i.Processor(ctx)
+	return i.impl.Process(ctx)
 }
-
-func (in *Input) Init(id string) (pubsub.Broker, error) {
-	in.ID = id
+func (in *Input) Init() (pubsub.Broker, error) {
+	// in.ID = id
 	in.Broker = pubsub.NewBroker(in.ID)
-	if err := in.Initialize(in.ID, in.Broker); err != nil {
+	if err := in.impl.Initialize(in.ID, in.Broker); err != nil {
 		slog.Error("could not setup input", "error", err)
 		return nil, err
 	}
 	return in.Broker, nil
 }
-func (in *Input) WithInputProcessor(inputSpecific InputProcessor) {
-	in.Processor = inputSpecific.Process
-	in.Initialize = inputSpecific.Initialize
-}
-func (in *Input) UnmarshalYAML(n *yaml.Node) error {
-	/*
-		for i := 0; i < len(n.Content)/2; i += 2 {
-			key := n.Content[i]
-			value := n.Content[i+1]
-			if key.Kind == yaml.ScalarNode && key.Value == "kind" {
-				if value.Kind != yaml.ScalarNode {
-					return errors.New("kind is not scalar")
-				}
-				in.Kind = value.Value
-			}
-		}
-	*/
-	type alias Input
-	tmp := (*alias)(in)
-	if err := n.Decode(&tmp); err != nil {
-		return err
-	}
-	in.Kind = tmp.Kind
-	var internal InputProcessor
-	switch in.Kind {
+
+func HclImpl(kind string, ctx *hcl.EvalContext, body hcl.Body) (InputProcessor, hcl.Diagnostics) {
+	slog.Debug("setting up input implementation")
+	var impl InputProcessor
+	switch kind {
 	case "file":
-		var finput FileInput
-		if err := n.Decode(&finput); err != nil {
-			return err
-		}
-		internal = &finput
+		impl = &FileInput{}
 	case "http":
-		var hin HTTPInput
-		if err := n.Decode(&hin); err != nil {
-			return err
-		}
-		internal = &hin
+		impl = &HTTPInput{}
+	default:
+		diags := hcl.Diagnostics{}
+		diags = append(diags, &hcl.Diagnostic{
+			Severity: hcl.DiagError,
+			Summary:  "invalid input type",
+			Detail:   fmt.Sprintf("%s is not a valid input type", kind),
+		})
+		return nil, diags
 
 	}
-	if internal == nil {
-		return ErrInvalidInput
-	}
-	in.WithInputProcessor(internal)
-	return nil
+	return impl, gohcl.DecodeBody(body, ctx, impl)
+
 }

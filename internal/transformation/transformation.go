@@ -6,12 +6,18 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/gohcl"
 	"google.golang.org/protobuf/types/known/structpb"
-	"gopkg.in/yaml.v3"
 
 	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
 	"github.com/binarymatt/optimus/internal/pubsub"
 	"github.com/binarymatt/optimus/internal/utils"
+)
+
+const (
+	KindJmespath = "jmespath"
+	KindJsonata  = "jsonata"
 )
 
 var (
@@ -22,49 +28,16 @@ type TransformerImpl interface {
 	Transform(ctx context.Context, data *structpb.Struct) (*structpb.Struct, error)
 	Initialize() error
 }
-type Transformer = func(ctx context.Context, data *structpb.Struct) (*structpb.Struct, error)
-type Initializer = func() error
 type Transformation struct {
 	ID            string
-	Kind          string   `yaml:"kind"`
-	Subscriptions []string `yaml:"subscriptions"`
+	Kind          string
+	Subscriptions []string
 	Broker        pubsub.Broker
 	Subscriber    pubsub.Subscriber
 	inputs        chan *optimusv1.LogEvent
-	// transformer   Transformer
-	// initialize    Initializer
-	impl TransformerImpl
+	impl          TransformerImpl
 }
 
-func (t *Transformation) UnmarshalYAML(n *yaml.Node) error {
-	type alias Transformation
-	tmp := (*alias)(t)
-	if err := n.Decode(&tmp); err != nil {
-		return err
-	}
-	t.Kind = tmp.Kind
-	t.Subscriptions = tmp.Subscriptions
-	var impl TransformerImpl
-	switch t.Kind {
-	case "jmespath":
-		var jmes JmesTransformer
-		if err := n.Decode(&jmes); err != nil {
-			return err
-		}
-		impl = &jmes
-	case "jsonata":
-		var jsonata JsonataTransformer
-		if err := n.Decode(&jsonata); err != nil {
-			return err
-		}
-		impl = &jsonata
-	default:
-		return fmt.Errorf("%s transformer bad: %w", t.Kind, ErrUnknownTransformer)
-	}
-	// t.transformer = impl.Transform
-	t.impl = impl
-	return nil
-}
 func (t *Transformation) Process(ctx context.Context) error {
 	for {
 		select {
@@ -97,8 +70,7 @@ func (t *Transformation) Process(ctx context.Context) error {
 	}
 }
 
-func (t *Transformation) Init(id string) (pubsub.Broker, error) {
-	t.ID = id
+func (t *Transformation) Init() (pubsub.Broker, error) {
 	slog.Warn("initializing transformer", "id", t.ID)
 	t.Broker = pubsub.NewBroker(t.ID)
 	t.inputs = make(chan *optimusv1.LogEvent, 1)
@@ -106,10 +78,30 @@ func (t *Transformation) Init(id string) (pubsub.Broker, error) {
 	return t.Broker, t.impl.Initialize()
 }
 
-func New(id, kind string, subscriptions []string, transformer TransformerImpl) *Transformation {
-	return &Transformation{
+func New(id, kind string, subscriptions []string, transformer TransformerImpl) (*Transformation, error) {
+	t := &Transformation{
 		ID:   id,
 		Kind: kind,
 		impl: transformer,
 	}
+	_, err := t.Init()
+	return t, err
+}
+func HclImpl(kind string, body hcl.Body) (TransformerImpl, hcl.Diagnostics) {
+	var impl TransformerImpl
+	switch kind {
+	case KindJmespath:
+		impl = &JmesTransformer{}
+	case KindJsonata:
+		impl = &JsonataTransformer{}
+	default:
+		diags := append(hcl.Diagnostics{}, &hcl.Diagnostic{
+			Severity: hcl.DiagError,
+			Summary:  "invalid transformation",
+			Detail:   fmt.Sprintf("%s is not a valid transformation type", kind),
+		})
+		return nil, diags
+	}
+	return impl, gohcl.DecodeBody(body, nil, impl)
+
 }

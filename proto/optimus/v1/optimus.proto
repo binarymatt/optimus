@@ -21,6 +21,7 @@ message StoreLogEventRequest {
 
 message LogEvent {
   string id = 1;
+  // TODO - change this to a proto.Message
   google.protobuf.Struct data = 2 [(buf.validate.field).required = true];
   string source = 3;
   repeated string upstreams = 4;

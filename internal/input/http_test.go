@@ -12,5 +12,4 @@ func TestHttpInitialize(t *testing.T) {
 	hi := &HTTPInput{}
 	broker := mocks.NewMockBroker(t)
 	must.NoError(t, hi.Initialize("test", broker))
-	must.Eq(t, "test", hi.ID)
 }
