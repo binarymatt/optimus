@@ -29,11 +29,6 @@ func WithLogLevel(logLevel string) ConfigOption {
 		c.LogLevel = level
 	}
 }
-func WithDataDir(dir string) ConfigOption {
-	return func(c *Config) {
-		c.DataDir = dir
-	}
-}
 func WithListenAddress(address string) ConfigOption {
 	return func(c *Config) {
 		c.ListenAddress = address

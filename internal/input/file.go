@@ -18,13 +18,21 @@ import (
 type FileInput struct {
 	id      string
 	Path    string `hcl:"path"`
+	DataDir string `hcl:"data_dir,optional"`
 	tracker *tail.TailTracker
+}
+
+func NewFileInput(path, dataDir string) *FileInput {
+	return &FileInput{
+		Path:    path,
+		DataDir: dataDir,
+	}
 }
 
 func (fi *FileInput) Initialize(id string, broker pubsub.Broker) error {
 	pathName := filepath.Clean(fi.Path)
 	slog.Debug("setting up file input", "path", pathName)
-	t, err := tail.NewTracker()
+	t, err := tail.NewTracker(fi.DataDir)
 	if err != nil {
 		return err
 	}

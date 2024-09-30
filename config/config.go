@@ -15,7 +15,7 @@ import (
 )
 
 type Config struct {
-	DataDir          string // used to store data about positions.
+	// DataDir          string // used to store data about positions.
 	MetricsEnabled   bool
 	LogLevel         slog.Level
 	HttpInputEnabled bool
@@ -85,9 +85,6 @@ func LoadHCL(fileName string, data []byte) (*Config, error) {
 		return nil, err
 	}
 	opts := []ConfigOption{}
-	if config.DataDir != "" {
-		opts = append(opts, WithDataDir(config.DataDir))
-	}
 	if config.ListenAddress != "" {
 		opts = append(opts, WithListenAddress(config.ListenAddress))
 	}
