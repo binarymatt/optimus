@@ -19,8 +19,9 @@ import (
 func TestInit(t *testing.T) {
 	mocked := mocks.NewMockDestinationProcessor(t)
 	mocked.EXPECT().Setup().Return(nil).Once()
-	d := &Destination{}
-	d.WithProcessor(mocked)
+	d := &Destination{
+		impl: mocked,
+	}
 	must.Eq(t, "", d.ID)
 	must.Eq(t, 0, d.BufferSize)
 	must.Nil(t, d.inputs)
@@ -41,20 +42,13 @@ func TestInit_Error(t *testing.T) {
 	must.ErrorIs(t, testErr, err)
 }
 
-func TestWithProcessor(t *testing.T) {
-	mocked := mocks.NewMockDestinationProcessor(t)
-	d := &Destination{}
-	must.Nil(t, d.impl)
-	d.WithProcessor(mocked)
-	must.NotNil(t, d.impl)
-}
-
 func TestProcess(t *testing.T) {
-	d := &Destination{}
 	mocked := mocks.NewMockDestinationProcessor(t)
 	mocked.EXPECT().Setup().Return(nil).Once()
 	mocked.EXPECT().Close().Return(nil).Once()
-	d.WithProcessor(mocked)
+	d := &Destination{
+		impl: mocked,
+	}
 	err := d.Init("testing")
 	must.NoError(t, err)
 	event := &optimusv1.LogEvent{

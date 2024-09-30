@@ -48,14 +48,9 @@ func New(id, kind string, subscriptions []string, impl DestinationProcessor) (*D
 		ID:            id,
 		Kind:          kind,
 		Subscriptions: subscriptions,
+		impl:          impl,
 	}
-	d.WithProcessor(impl)
 	return d, d.Init(id)
-}
-
-func (d *Destination) WithProcessor(impl DestinationProcessor) {
-	slog.Info("setting up processor", "id", d.ID, "kind", d.Kind)
-	d.impl = impl
 }
 
 func (d *Destination) Init(id string) error {
