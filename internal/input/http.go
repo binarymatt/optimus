@@ -26,6 +26,7 @@ func (hi *HTTPInput) Initialize(id string, broker pubsub.Broker) error {
 	)
 	slog.Debug("setting up http input", "path", path)
 	http.Handle(path, handler)
+	slog.Info("done with http initialization", "path", path, "id", id)
 	return nil
 }
 

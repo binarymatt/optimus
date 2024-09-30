@@ -50,8 +50,8 @@ func TestInit(t *testing.T) {
 	mocked.EXPECT().
 		Initialize("testid", mock.AnythingOfType("*pubsub.broker")).
 		Return(nil).Once()
-	b, err := i.Init()
-	must.NotNil(t, b)
+	err := i.Init()
+	must.NotNil(t, i.Broker)
 	must.NoError(t, err)
 }
 
@@ -65,8 +65,8 @@ func TestInit_Error(t *testing.T) {
 	mocked.EXPECT().
 		Initialize("testid", mock.AnythingOfType("*pubsub.broker")).
 		Return(errOops).Once()
-	b, err := i.Init()
-	must.Nil(t, b)
+	err := i.Init()
+	must.Nil(t, i.Broker)
 	must.ErrorIs(t, errOops, err)
 }
 

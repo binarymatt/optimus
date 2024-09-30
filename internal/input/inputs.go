@@ -39,21 +39,24 @@ func New(id, kind string, internal InputProcessor) (*Input, error) {
 		Kind: kind,
 		impl: internal,
 	}
-	_, err := in.Init()
+	fmt.Println("about to init")
+	err := in.Init()
+	fmt.Println("done with init")
 	return in, err
 }
 
 func (i *Input) Process(ctx context.Context) (err error) {
 	return i.impl.Process(ctx)
 }
-func (in *Input) Init() (pubsub.Broker, error) {
-	// in.ID = id
-	in.Broker = pubsub.NewBroker(in.ID)
-	if err := in.impl.Initialize(in.ID, in.Broker); err != nil {
-		slog.Error("could not setup input", "error", err)
-		return nil, err
+func (in *Input) Init() error {
+	broker := pubsub.NewBroker(in.ID)
+	if err := in.impl.Initialize(in.ID, broker); err != nil {
+		fmt.Println("big error in init", "error", err)
+		return err
 	}
-	return in.Broker, nil
+	in.Broker = broker
+	fmt.Println("setting broker")
+	return nil
 }
 
 func HclImpl(kind string, ctx *hcl.EvalContext, body hcl.Body) (InputProcessor, hcl.Diagnostics) {
