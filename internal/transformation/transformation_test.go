@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/shoenig/test/must"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -15,19 +17,17 @@ import (
 
 func TestNew(t *testing.T) {
 	mocked := mocks.NewMockTransformerImpl(t)
-	tr := New("test_name", "test", []string{}, nil)
-	must.Eq(t, "test_name", tr.ID)
-	must.Nil(t, tr.impl)
-	tr = New("test_name", "test", []string{}, mocked)
+	mocked.EXPECT().Initialize().Return(nil)
+	tr, err := New("test_name", "test", []string{}, mocked)
+	must.NoError(t, err)
 	must.NotNil(t, tr.impl)
 }
 
 func TestProcess_HappyPath(t *testing.T) {
 	mocked := mocks.NewMockTransformerImpl(t)
 	ctx, cancel := context.WithCancel(context.Background())
-	tr := New("test_name", "test", []string{}, mocked)
 	mocked.EXPECT().Initialize().Return(nil)
-	_, _ = tr.Init("test_name")
+	tr, _ := New("test_name", "test", []string{}, mocked)
 	eg := new(errgroup.Group)
 	eg.Go(func() error {
 		return tr.Process(ctx)
@@ -48,4 +48,53 @@ func TestProcess_HappyPath(t *testing.T) {
 	err = eg.Wait()
 	must.NoError(t, err)
 
+}
+
+func TestHclImpl(t *testing.T) {
+
+	cases := []struct {
+		name     string
+		kind     string
+		body     string
+		expected TransformerImpl
+		diags    hcl.Diagnostics
+	}{
+		{
+			name: "jsonata transform",
+			kind: KindJsonata,
+			body: `expression = "$sum(orders.(price * quantity))"`,
+			expected: &JsonataTransformer{
+				Expression: "$sum(orders.(price * quantity))",
+			},
+		},
+		{
+			name: "jmespath transform",
+			kind: KindJmespath,
+			body: `expression = "locations[?state == 'WA']"`,
+			expected: &JmesTransformer{
+				Expression: `locations[?state == 'WA']`,
+			},
+		},
+		{
+			name: "invalid input",
+			kind: "test",
+			diags: append(hcl.Diagnostics{}, &hcl.Diagnostic{
+				Severity: hcl.DiagError,
+				Summary:  "invalid transformation",
+				Detail:   "test is not a valid transformation type",
+			}),
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f, diag := hclparse.NewParser().ParseHCL([]byte(tc.body), "test.file")
+			if diag.HasErrors() {
+				t.Logf("parse errors: %v", diag.Errs())
+			}
+			must.False(t, diag.HasErrors())
+			impl, diags := HclImpl(tc.kind, f.Body)
+			must.Eq(t, tc.diags, diags)
+			must.Eq(t, tc.expected, impl)
+		})
+	}
 }

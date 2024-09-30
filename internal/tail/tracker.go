@@ -42,16 +42,26 @@ func savePos(path string, pos int64) error {
 	raw := strconv.FormatInt(pos, 10)
 	return os.WriteFile(path, []byte(raw), 0644)
 }
-func checkpointFilePath(path string) (string, error) {
+func defaultDataDir() (string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
+	}
+	return filepath.Join(homeDir, ".config", "optimus"), nil
+}
+func checkpointFilePath(path, dataDir string) (string, error) {
+	if dataDir == "" {
+		defaultDir, err := defaultDataDir()
+		if err != nil {
+			return "", nil
+		}
+		dataDir = defaultDir
 	}
 	h := sha256.New()
 	h.Write([]byte(path))
 	raw := h.Sum(nil)
 
-	name := filepath.Join(homeDir, ".config", "optimus", fmt.Sprintf("%x.checkpoint", raw))
+	name := filepath.Join(dataDir, fmt.Sprintf("%x.checkpoint", raw))
 	if err := os.MkdirAll(filepath.Dir(name), os.ModePerm); err != nil {
 		slog.Error("could not make config dir")
 		return "", err
@@ -59,10 +69,10 @@ func checkpointFilePath(path string) (string, error) {
 	slog.Debug("returning checkpoint", "path", name)
 	return name, nil
 }
-func NewInfo(path string, processor LineProcessor) (*PathInfo, error) {
+func NewInfo(path, dataDir string, processor LineProcessor) (*PathInfo, error) {
 	name := filepath.Clean(path)
 	isD := isDir(name)
-	chkPath, err := checkpointFilePath(name)
+	chkPath, err := checkpointFilePath(name, dataDir)
 	if err != nil {
 		slog.Error("checkpoint path resulted in error, not setting", "error", err)
 	}
@@ -178,7 +188,7 @@ func (p *PathInfo) ReadUntilEOF() {
 	}
 }
 
-func NewTracker() (*TailTracker, error) {
+func NewTracker(dataDir string) (*TailTracker, error) {
 	// eg, ctx := errgroup.WithContext(ctx)
 	// ctx, cancel := context.WithCancel(ctx)
 	w, err := fsnotify.NewWatcher()
@@ -192,6 +202,7 @@ func NewTracker() (*TailTracker, error) {
 		//eg:      eg,
 		// ctx:        ctx,
 		watcher: w,
+		dataDir: dataDir,
 		// cancelFunc: cancel,
 	}, nil
 }
@@ -201,6 +212,7 @@ type TailTracker struct {
 	mux     sync.Mutex
 	paths   map[string]*PathInfo
 	watcher *fsnotify.Watcher
+	dataDir string
 	// eg         *errgroup.Group
 	// ctx        context.Context
 	// cancelFunc context.CancelFunc
@@ -278,7 +290,7 @@ func (t *TailTracker) AddPath(path string, processor LineProcessor) (*PathInfo, 
 	slog.Debug("adding path to tracker", "path", path)
 
 	name := filepath.Clean(path)
-	info, err := NewInfo(path, processor)
+	info, err := NewInfo(path, t.dataDir, processor)
 	if err != nil {
 		return nil, err
 	}

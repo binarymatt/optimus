@@ -4,98 +4,114 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/shoenig/test/must"
 	"github.com/stretchr/testify/mock"
 	"golang.org/x/net/context"
-	"gopkg.in/yaml.v3"
 
-	"github.com/binarymatt/optimus/internal/pubsub"
+	"github.com/binarymatt/optimus/mocks"
 )
 
-type MockedProcessor struct {
-	mock.Mock
-}
-
-func (m *MockedProcessor) Process(ctx context.Context) error {
-	args := m.Called(ctx)
-	return args.Error(0)
-}
-
-type MockedInitializer struct {
-	mock.Mock
-}
-
-func (m *MockedInitializer) Initialize(id string, broker pubsub.Broker) error {
-	args := m.Called(id, broker)
-	return args.Error(0)
-}
-func setupInput(t *testing.T) (*Input, *MockedInitializer, *MockedProcessor) {
-
-	processor := new(MockedProcessor)
-	initializer := new(MockedInitializer)
-	t.Cleanup(func() {
-		processor.AssertExpectations(t)
-		initializer.AssertExpectations(t)
-	})
-	return &Input{
-		Processor:  processor.Process,
-		Initialize: initializer.Initialize,
-	}, initializer, processor
+func TestNew(t *testing.T) {
+	mocked := mocks.NewMockInputProcessor(t)
+	mocked.EXPECT().Initialize("test", mock.AnythingOfType("*pubsub.broker")).Return(nil)
+	p, err := New("test", KindHttp, mocked)
+	must.NoError(t, err)
+	must.NotNil(t, p)
 }
 func TestProcess(t *testing.T) {
-	i, _, processor := setupInput(t)
+	mocked := mocks.NewMockInputProcessor(t)
+	i := &Input{
+		impl: mocked,
+	}
 	ctx := context.Background()
-	processor.On("Process", ctx).Return(nil).Once()
+	mocked.EXPECT().Process(ctx).Return(nil).Once()
 	must.NoError(t, i.Process(ctx))
 }
 
 func TestProcess_Error(t *testing.T) {
-	i, _, processor := setupInput(t)
+	mocked := mocks.NewMockInputProcessor(t)
+	i := &Input{
+		impl: mocked,
+	}
 	ctx := context.Background()
 	errOops := errors.New("oops")
-	processor.On("Process", ctx).Return(errOops).Once()
+	mocked.EXPECT().Process(ctx).Return(errOops).Once()
 	must.ErrorIs(t, errOops, i.Process(ctx))
 }
 
 func TestInit(t *testing.T) {
-	i, init, _ := setupInput(t)
-	init.On("Initialize", "testid", mock.AnythingOfType("*pubsub.broker")).Return(nil).Once()
-	b, err := i.Init("testid")
-	must.NotNil(t, b)
+	mocked := mocks.NewMockInputProcessor(t)
+	i := &Input{
+		ID:   "testid",
+		impl: mocked,
+	}
+	mocked.EXPECT().
+		Initialize("testid", mock.AnythingOfType("*pubsub.broker")).
+		Return(nil).Once()
+	err := i.Init()
+	must.NotNil(t, i.Broker)
 	must.NoError(t, err)
 }
 
 func TestInit_Error(t *testing.T) {
-	i, init, _ := setupInput(t)
+	mocked := mocks.NewMockInputProcessor(t)
+	i := &Input{
+		ID:   "testid",
+		impl: mocked,
+	}
 	errOops := errors.New("oops")
-	init.On("Initialize", "testid", mock.AnythingOfType("*pubsub.broker")).Return(errOops).Once()
-	b, err := i.Init("testid")
-	must.Nil(t, b)
+	mocked.EXPECT().
+		Initialize("testid", mock.AnythingOfType("*pubsub.broker")).
+		Return(errOops).Once()
+	err := i.Init()
+	must.Nil(t, i.Broker)
 	must.ErrorIs(t, errOops, err)
 }
 
-var data = `---
-kind: http
-`
-var dataErr = `---
-kind: unknown
-`
+func TestHclImpl(t *testing.T) {
 
-func TestUnmarshalYAML(t *testing.T) {
-	i, _, _ := setupInput(t)
-	var raw yaml.Node
-	err := yaml.Unmarshal([]byte(data), &raw)
-	must.NoError(t, err)
-	err = i.UnmarshalYAML(&raw)
-	must.NoError(t, err)
-	must.NotNil(t, i.Processor)
-	must.NotNil(t, i.Initialize)
-}
-func TestUnmarshalYAML_Error(t *testing.T) {
-	i, _, _ := setupInput(t)
-	var raw yaml.Node
-	err := yaml.Unmarshal([]byte(dataErr), &raw)
-	must.NoError(t, err)
-	err = i.UnmarshalYAML(&raw)
-	must.ErrorIs(t, ErrInvalidInput, err)
+	cases := []struct {
+		name     string
+		kind     string
+		body     string
+		expected InputProcessor
+		diags    hcl.Diagnostics
+	}{
+		{
+			name: "http input",
+			kind: KindFile,
+			body: `path = "test.out"`,
+			expected: &FileInput{
+				Path: "test.out",
+			},
+		},
+		{
+			name:     "http input",
+			kind:     KindHttp,
+			expected: &HTTPInput{},
+		},
+		{
+			name: "invalid input",
+			kind: "test",
+			diags: append(hcl.Diagnostics{}, &hcl.Diagnostic{
+				Severity: hcl.DiagError,
+				Summary:  "invalid input",
+				Detail:   "test is not a valid input type",
+			}),
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f, diag := hclparse.NewParser().ParseHCL([]byte(tc.body), "test.file")
+			if diag.HasErrors() {
+				t.Logf("parse errors: %v", diag.Errs())
+			}
+			must.False(t, diag.HasErrors())
+			impl, diags := HclImpl(tc.kind, nil, f.Body)
+			must.Eq(t, tc.diags, diags)
+			must.Eq(t, tc.expected, impl)
+		})
+	}
 }

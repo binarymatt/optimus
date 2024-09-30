@@ -11,21 +11,18 @@ import (
 	"github.com/lmittmann/tint"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/structpb"
-	"gopkg.in/yaml.v3"
 
 	"github.com/binarymatt/optimus"
 	"github.com/binarymatt/optimus/config"
 	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
 )
 
-func loadConfig(filePath string) (*config.Config, error) {
+func loadConfig(filePath string, opts ...config.ConfigOption) (*config.Config, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
-	cfg := config.Config{}
-	err = yaml.Unmarshal(data, &cfg)
-	return &cfg, err
+	return config.LoadHCL(filePath, data, opts...)
 }
 func main() {
 	logger := slog.New(tint.NewHandler(os.Stderr, &tint.Options{
@@ -42,17 +39,18 @@ func main() {
 	)
 	defer cancel()
 	eg, ctx := errgroup.WithContext(ctx)
-	slog.Warn("loading config")
-	cfg, err := config.LoadYamlFromFile("sample_config.yaml")
-	if err != nil {
-		return
-	}
+
 	c := make(chan *optimusv1.LogEvent)
-	config.WithChannelInput("testing", c)(cfg)
-	o, err := optimus.New(cfg)
+	slog.Warn("loading config")
+	cfg, err := loadConfig("sample_config.hcl",
+		config.WithChannelInput("testing", c),
+	)
 	if err != nil {
+		slog.Error("could not load config", "error", err)
 		return
 	}
+
+	o := optimus.New(cfg)
 	eg.Go(func() error {
 		return o.Run(ctx)
 	})

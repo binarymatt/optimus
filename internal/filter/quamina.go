@@ -10,7 +10,7 @@ import (
 )
 
 type QuaminaFilter struct {
-	Patterns map[string]string `yaml:"patterns"`
+	Patterns map[string]string `hcl:"patterns"`
 	q        *quamina.Quamina
 }
 

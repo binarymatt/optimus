@@ -9,7 +9,6 @@ import (
 	"github.com/lmittmann/tint"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
-	"gopkg.in/yaml.v3"
 
 	"github.com/binarymatt/optimus"
 	"github.com/binarymatt/optimus/config"
@@ -85,9 +84,7 @@ func loadConfig(filePath string) (*config.Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	cfg := config.Config{}
-	err = yaml.Unmarshal(data, &cfg)
-	return &cfg, err
+	return config.LoadHCL(filePath, data)
 }
 
 func Run(cctx *cli.Context) error {
@@ -108,9 +105,6 @@ func Run(cctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	o, err := optimus.New(cfg)
-	if err != nil {
-		return err
-	}
+	o := optimus.New(cfg)
 	return o.Run(ctx)
 }

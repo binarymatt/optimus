@@ -14,7 +14,7 @@ var (
 )
 
 type JsonataTransformer struct {
-	Expression string `yaml:"expression"`
+	Expression string `hcl:"expression"`
 	expr       *jsonata.Expr
 }
 

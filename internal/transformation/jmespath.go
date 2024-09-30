@@ -8,7 +8,7 @@ import (
 )
 
 type JmesTransformer struct {
-	Expression string `yaml:"expression"`
+	Expression string `hcl:"expression"`
 	path       *jmespath.JMESPath
 }
 

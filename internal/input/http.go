@@ -14,13 +14,11 @@ import (
 )
 
 type HTTPInput struct {
-	ID string
-	// Address string `yaml:"address"`
 }
 
 func (hi *HTTPInput) Initialize(id string, broker pubsub.Broker) error {
-	hi.ID = id
-	path, handler := optimusv1connect.NewOptimusLogServiceHandler(service.New(broker, id),
+	path, handler := optimusv1connect.NewOptimusLogServiceHandler(
+		service.New(broker, id),
 		connect.WithInterceptors(
 			logging.NewInterceptor(),
 			service.MetricsInterceptor(),
@@ -28,6 +26,7 @@ func (hi *HTTPInput) Initialize(id string, broker pubsub.Broker) error {
 	)
 	slog.Debug("setting up http input", "path", path)
 	http.Handle(path, handler)
+	slog.Info("done with http initialization", "path", path, "id", id)
 	return nil
 }
 
