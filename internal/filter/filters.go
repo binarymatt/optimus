@@ -44,11 +44,11 @@ func New(id, kind string, subscriptions []string, impl FilterProcessor) (*Filter
 		impl:          impl,
 		Subscriptions: subscriptions,
 	}
-	_, err := f.Init()
+	err := f.Init()
 	return f, err
 }
 
-func (f *Filter) Init() (pubsub.Broker, error) {
+func (f *Filter) Init() error {
 	if f.BufferSize == 0 {
 		f.BufferSize = 5
 	}
@@ -56,7 +56,7 @@ func (f *Filter) Init() (pubsub.Broker, error) {
 	f.inputs = make(chan *optimusv1.LogEvent, f.BufferSize)
 	f.Subscriber = pubsub.NewSubscriber(f.ID, f.inputs)
 
-	return f.Broker, f.impl.Setup()
+	return f.impl.Setup()
 }
 
 func (f *Filter) Process(ctx context.Context) error {

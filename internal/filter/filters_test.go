@@ -26,7 +26,7 @@ func TestInit(t *testing.T) {
 	must.Nil(t, f.inputs)
 	must.Zero(t, f.BufferSize)
 
-	_, err := f.Init()
+	err := f.Init()
 	must.NoError(t, err)
 	must.Eq(t, 5, f.BufferSize)
 	must.NotNil(t, f.Broker)
@@ -44,7 +44,7 @@ func TestProcess(t *testing.T) {
 		BufferSize: 1,
 		impl:       mocked,
 	}
-	_, err := f.Init()
+	err := f.Init()
 	must.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	eg, ctx := errgroup.WithContext(ctx)
