@@ -11,7 +11,6 @@ import (
 	"github.com/lmittmann/tint"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/structpb"
-	"gopkg.in/yaml.v3"
 
 	"github.com/binarymatt/optimus"
 	"github.com/binarymatt/optimus/config"
@@ -23,9 +22,7 @@ func loadConfig(filePath string) (*config.Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	cfg := config.Config{}
-	err = yaml.Unmarshal(data, &cfg)
-	return &cfg, err
+	return config.LoadHCL(filePath, data)
 }
 func main() {
 	logger := slog.New(tint.NewHandler(os.Stderr, &tint.Options{
