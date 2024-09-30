@@ -39,21 +39,6 @@ type HclConfig struct {
 	Destinations    []HclConfigItemWithSubscriptions `hcl:"destination,block"`
 }
 
-func processConfigItem(items []HclConfigItem, ctx *hcl.EvalContext) {
-	for _, item := range items {
-		ctx.Variables[item.Kind] = cty.ObjectVal(map[string]cty.Value{
-			item.ID: cty.StringVal(item.ID),
-		})
-	}
-}
-func processConfigItemWithSubs(items []HclConfigItemWithSubscriptions, ctx *hcl.EvalContext) {
-	for _, item := range items {
-		ctx.Variables[item.Kind] = cty.ObjectVal(map[string]cty.Value{
-			item.ID: cty.StringVal(item.ID),
-		})
-	}
-}
-
 func (hc HclConfig) EvalContext() *hcl.EvalContext {
 	ctx := &hcl.EvalContext{
 		Variables: make(map[string]cty.Value),
