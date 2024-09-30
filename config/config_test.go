@@ -15,32 +15,6 @@ import (
 	"github.com/binarymatt/optimus/mocks"
 )
 
-var ymlStr = `---
-data_dir: "/tmp/data"
-metrics_enabled: true
-listen_address: ":8080"
-console: true
-log_level: debug
-inputs:
-  fileInput:
-    kind: file
-    path: "./cmd/test/tmp"
-  httpInput:
-    kind: http
-destinations:
-  sampleout:
-    kind: stdout
-    subscriptions:
-      - fileInput
-      - httpInput
-      - testing
-  samplefile:
-    kind: file
-    path: "test.ndjson"
-    subscriptions:
-      - httpInput
-`
-
 func TestConfigInit(t *testing.T) {
 	cfg := &Config{}
 	cfg.Init()
@@ -136,4 +110,14 @@ func TestHclConfig(t *testing.T) {
 	must.Eq(t, []string{"test_input"}, filter.Subscriptions)
 	must.Eq(t, "test_filter", filter.ID)
 	must.Eq(t, "bexpr", filter.Kind)
+}
+
+var rawData = `
+metrics_enabled = false
+`
+
+func TestLoadHcl(t *testing.T) {
+	cfg, err := LoadHCL("test.hcl", []byte(rawData))
+	must.NoError(t, err)
+	must.NotNil(t, cfg)
 }

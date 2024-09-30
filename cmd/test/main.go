@@ -17,12 +17,12 @@ import (
 	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
 )
 
-func loadConfig(filePath string) (*config.Config, error) {
+func loadConfig(filePath string, opts ...config.ConfigOption) (*config.Config, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
-	return config.LoadHCL(filePath, data)
+	return config.LoadHCL(filePath, data, opts...)
 }
 func main() {
 	logger := slog.New(tint.NewHandler(os.Stderr, &tint.Options{
@@ -39,17 +39,17 @@ func main() {
 	)
 	defer cancel()
 	eg, ctx := errgroup.WithContext(ctx)
-	slog.Warn("loading config")
-	rawCfg, err := os.ReadFile("sample_config.hcl")
-	if err != nil {
-		return
-	}
-	cfg, err := config.LoadHCL("sample_config.hcl", rawCfg)
-	if err != nil {
-		return
-	}
+
 	c := make(chan *optimusv1.LogEvent)
-	config.WithChannelInput("testing", c)(cfg)
+	slog.Warn("loading config")
+	cfg, err := loadConfig("sample_config.hcl",
+		config.WithChannelInput("testing", c),
+	)
+	if err != nil {
+		slog.Error("could not load config", "error", err)
+		return
+	}
+
 	o := optimus.New(cfg)
 	eg.Go(func() error {
 		return o.Run(ctx)

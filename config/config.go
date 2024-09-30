@@ -77,14 +77,13 @@ type HclConfigItemWithSubscriptions struct {
 	Body          hcl.Body `hcl:",remain"`
 }
 
-func LoadHCL(fileName string, data []byte) (*Config, error) {
+func LoadHCL(fileName string, data []byte, opts ...ConfigOption) (*Config, error) {
 	var diags hcl.Diagnostics
 	var config HclConfig
 	if err := hclsimple.Decode(fileName, data, nil, &config); err != nil {
 		slog.Error("error during simple decode", "error", err)
 		return nil, err
 	}
-	opts := []ConfigOption{}
 	if config.ListenAddress != "" {
 		opts = append(opts, WithListenAddress(config.ListenAddress))
 	}
