@@ -43,10 +43,6 @@ func (hc HclConfig) EvalContext() *hcl.EvalContext {
 	ctx := &hcl.EvalContext{
 		Variables: make(map[string]cty.Value),
 	}
-	// processConfigItem(hc.Inputs, ctx)
-	// processConfigItemWithSubs(hc.Filters, ctx)
-	// processConfigItemWithSubs(hc.Transformations, ctx)
-	// processConfigItemWithSubs(hc.Destinations, ctx)
 	return ctx
 }
 
