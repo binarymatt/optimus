@@ -15,6 +15,7 @@ import (
 	"github.com/binarymatt/optimus"
 	"github.com/binarymatt/optimus/config"
 	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
+	"github.com/binarymatt/optimus/internal/input"
 )
 
 func loadConfig(filePath string, opts ...config.ConfigOption) (*config.Config, error) {
@@ -42,8 +43,11 @@ func main() {
 
 	c := make(chan *optimusv1.LogEvent)
 	slog.Warn("loading config")
+	inputImpl := &input.ChannelInput{
+		Input: c,
+	}
 	cfg, err := loadConfig("sample_config.hcl",
-		config.WithChannelInput("testing", c),
+		config.WithInput("testing", "channel", inputImpl),
 	)
 	if err != nil {
 		slog.Error("could not load config", "error", err)

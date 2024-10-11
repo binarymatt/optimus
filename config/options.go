@@ -2,8 +2,8 @@ package config
 
 import (
 	"log/slog"
+	"strings"
 
-	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
 	"github.com/binarymatt/optimus/internal/destination"
 	"github.com/binarymatt/optimus/internal/filter"
 	"github.com/binarymatt/optimus/internal/input"
@@ -15,13 +15,13 @@ type ConfigOption func(*Config)
 func WithLogLevel(logLevel string) ConfigOption {
 	return func(c *Config) {
 		level := slog.LevelInfo
-		switch logLevel {
+		switch strings.ToLower(logLevel) {
 		case "debug":
 			level = slog.LevelDebug
 		case "info":
-			level = slog.LevelDebug
+			level = slog.LevelInfo
 		case "warn":
-			level = slog.LevelDebug
+			level = slog.LevelWarn
 		case "error":
 			level = slog.LevelError
 		}
@@ -56,9 +56,9 @@ func WithInput(id, kind string, impl input.InputProcessor) ConfigOption {
 	}
 }
 
-func WithDestination(id, kind string, subscriptions []string, impl destination.DestinationProcessor) ConfigOption {
+func WithDestination(id, kind string, bufferSize int, subscriptions []string, impl destination.DestinationProcessor) ConfigOption {
 	return func(c *Config) {
-		d, err := destination.New(id, kind, subscriptions, impl)
+		d, err := destination.New(id, kind, bufferSize, subscriptions, impl)
 		if err != nil {
 			slog.Error("error creating destination", "error", err)
 			return
@@ -66,9 +66,9 @@ func WithDestination(id, kind string, subscriptions []string, impl destination.D
 		c.Destinations = append(c.Destinations, d)
 	}
 }
-func WithFilter(id, kind string, subscriptions []string, impl filter.FilterProcessor) ConfigOption {
+func WithFilter(id, kind string, bufferSize int, subscriptions []string, impl filter.FilterProcessor) ConfigOption {
 	return func(c *Config) {
-		f, err := filter.New(id, kind, subscriptions, impl)
+		f, err := filter.New(id, kind, bufferSize, subscriptions, impl)
 		if err != nil {
 			slog.Error("error creating filter", "error", err)
 			return
@@ -78,28 +78,9 @@ func WithFilter(id, kind string, subscriptions []string, impl filter.FilterProce
 	}
 }
 
-func WithChannelInput(name string, in <-chan *optimusv1.LogEvent) ConfigOption {
+func WithTransformer(id, kind string, bufferSize int, subscriptions []string, transformer transformation.TransformerImpl) ConfigOption {
 	return func(c *Config) {
-		ci := &input.ChannelInput{
-			Input: in,
-		}
-		input, _ := input.New(name, "channel", ci)
-		c.Inputs = append(c.Inputs, input)
-	}
-}
-
-func WithChannelOutput(name string, out chan<- *optimusv1.LogEvent, subscriptions []string) ConfigOption {
-	return func(c *Config) {
-		cd := &destination.ChannelDestination{
-			Output: out,
-		}
-		WithDestination(name, "channel", subscriptions, cd)(c)
-	}
-}
-
-func WithTransformer(id, kind string, subscriptions []string, transformer transformation.TransformerImpl) ConfigOption {
-	return func(c *Config) {
-		t, err := transformation.New(id, kind, subscriptions, transformer)
+		t, err := transformation.New(id, kind, bufferSize, subscriptions, transformer)
 		if err != nil {
 			slog.Error("coudl not create new transformation", "error", err)
 			return

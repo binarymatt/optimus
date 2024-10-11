@@ -54,6 +54,7 @@ type HclConfigItem struct {
 type HclConfigItemWithSubscriptions struct {
 	Kind          string   `hcl:"kind,label"`
 	ID            string   `hcl:"id,label"`
+	BufferSize    int      `hcl:"buffer_size,optional"`
 	Subscriptions []string `hcl:"subscriptions"`
 	Body          hcl.Body `hcl:",remain"`
 }
@@ -89,7 +90,7 @@ func LoadHCL(fileName string, data []byte, opts ...ConfigOption) (*Config, error
 		if more.HasErrors() {
 			continue
 		}
-		opts = append(opts, WithFilter(fltr.ID, fltr.Kind, fltr.Subscriptions, impl))
+		opts = append(opts, WithFilter(fltr.ID, fltr.Kind, fltr.BufferSize, fltr.Subscriptions, impl))
 	}
 	for _, tr := range config.Transformations {
 		impl, more := transformation.HclImpl(tr.Kind, tr.Body)
@@ -97,7 +98,7 @@ func LoadHCL(fileName string, data []byte, opts ...ConfigOption) (*Config, error
 		if more.HasErrors() {
 			continue
 		}
-		opts = append(opts, WithTransformer(tr.ID, tr.Kind, tr.Subscriptions, impl))
+		opts = append(opts, WithTransformer(tr.ID, tr.Kind, tr.BufferSize, tr.Subscriptions, impl))
 	}
 	for _, d := range config.Destinations {
 		impl, more := destination.HclImpl(d.Kind, d.Body)
@@ -105,7 +106,7 @@ func LoadHCL(fileName string, data []byte, opts ...ConfigOption) (*Config, error
 		if more.HasErrors() {
 			continue
 		}
-		opts = append(opts, WithDestination(d.ID, d.Kind, d.Subscriptions, impl))
+		opts = append(opts, WithDestination(d.ID, d.Kind, d.BufferSize, d.Subscriptions, impl))
 	}
 
 	if diags.HasErrors() {

@@ -2,12 +2,12 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
 	"testing"
 
 	"github.com/shoenig/test/must"
 	"github.com/stretchr/testify/mock"
 
-	optimusv1 "github.com/binarymatt/optimus/gen/optimus/v1"
 	"github.com/binarymatt/optimus/internal/destination"
 	"github.com/binarymatt/optimus/internal/filter"
 	"github.com/binarymatt/optimus/internal/input"
@@ -21,33 +21,57 @@ func TestConfigInit(t *testing.T) {
 	must.Eq(t, ":8080", cfg.ListenAddress)
 }
 
-func TestWithChannelInput(t *testing.T) {
-	ch := make(chan *optimusv1.LogEvent)
-	opt := WithChannelInput("testing", ch)
-	c := New(opt)
-	input := c.Inputs[0]
-	must.NotNil(t, input)
-	must.Eq(t, "testing", input.ID)
-	must.Eq(t, "channel", input.Kind)
-}
-
-func TestWithChannelOutput(t *testing.T) {
-	ch := make(chan *optimusv1.LogEvent)
-	opt := WithChannelOutput("testOut", ch, []string{"test"})
-	cfg := New(opt)
-	out := cfg.Destinations[0]
-	must.NotNil(t, out)
-	must.Eq(t, "channel", out.Kind)
-	must.Eq(t, []string{"test"}, out.Subscriptions)
-}
-
 func TestWithTransformer(t *testing.T) {
 	trImpl := mocks.NewMockTransformerImpl(t)
 	trImpl.EXPECT().Initialize().Return(nil)
-	opt := WithTransformer("testname", "test", []string{}, trImpl)
+	opt := WithTransformer("testname", "test", 1, []string{}, trImpl)
 	cfg := New(opt)
 	out := cfg.Transformations[0]
 	must.NotNil(t, out)
+}
+func TestWithLogLevel(t *testing.T) {
+	cases := []struct {
+		name          string
+		expectedLevel slog.Level
+		level         string
+	}{
+		{
+			name:          "empty string",
+			expectedLevel: slog.LevelInfo,
+			level:         "",
+		},
+		{
+			name:          "debug",
+			expectedLevel: slog.LevelDebug,
+			level:         "debug",
+		},
+		{
+			name:          "info",
+			expectedLevel: slog.LevelInfo,
+			level:         "",
+		},
+		{
+			name:          "warn",
+			expectedLevel: slog.LevelWarn,
+			level:         "warn",
+		},
+		{
+			name:          "error",
+			expectedLevel: slog.LevelError,
+			level:         "error",
+		},
+		{
+			name:          "upper case string",
+			expectedLevel: slog.LevelInfo,
+			level:         "INFO",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := New(WithLogLevel(tc.level))
+			must.Eq(t, tc.expectedLevel, cfg.LogLevel)
+		})
+	}
 }
 
 func TestProgramaticConfig(t *testing.T) {
@@ -61,9 +85,9 @@ func TestProgramaticConfig(t *testing.T) {
 	mockDestination.EXPECT().Setup().Return(nil).Once()
 	cfg := New(
 		WithInput("test_input", "http", mockInput),
-		WithFilter("test_filter", "bexpr", []string{"test_input"}, mockFilter),
-		WithTransformer("test_transform", "jsonata", []string{"test_filter"}, mockTransformer),
-		WithDestination("test_dest", "stdout", []string{"test_transform"}, mockDestination),
+		WithFilter("test_filter", "bexpr", 1, []string{"test_input"}, mockFilter),
+		WithTransformer("test_transform", "jsonata", 1, []string{"test_filter"}, mockTransformer),
+		WithDestination("test_dest", "stdout", 1, []string{"test_transform"}, mockDestination),
 		WithMetricsEnabled(),
 		WithListenAddress(":8081"),
 	)
@@ -79,9 +103,9 @@ func TestCompareConfig(t *testing.T) {
 	t.SkipNow()
 	cfg := New(
 		WithInput("test_input", "http", &input.HTTPInput{}),
-		WithFilter("test_filter", "bexpr", []string{"test_input"}, &filter.BexprFilter{Expression: `action == "create"`}),
-		WithTransformer("test_transform", "jsonata", []string{"test_filter"}, &transformation.JsonataTransformer{Expression: `{"user_email":principal.email,"path":path}`}),
-		WithDestination("test_dest", "stdout", []string{"test_transform"}, &destination.StdOutDestination{}),
+		WithFilter("test_filter", "bexpr", 1, []string{"test_input"}, &filter.BexprFilter{Expression: `action == "create"`}),
+		WithTransformer("test_transform", "jsonata", 1, []string{"test_filter"}, &transformation.JsonataTransformer{Expression: `{"user_email":principal.email,"path":path}`}),
+		WithDestination("test_dest", "stdout", 1, []string{"test_transform"}, &destination.StdOutDestination{}),
 		WithMetricsEnabled(),
 		WithListenAddress(":8081"),
 	)
