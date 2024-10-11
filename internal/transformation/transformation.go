@@ -36,6 +36,7 @@ type Transformation struct {
 	Subscriber    pubsub.Subscriber
 	inputs        chan *optimusv1.LogEvent
 	impl          TransformerImpl
+	BufferSize    int
 }
 
 func (t *Transformation) Process(ctx context.Context) error {
@@ -72,17 +73,22 @@ func (t *Transformation) Process(ctx context.Context) error {
 
 func (t *Transformation) Init() (pubsub.Broker, error) {
 	slog.Warn("initializing transformer", "id", t.ID)
+	if t.BufferSize == 0 {
+		t.BufferSize = 5
+	}
+
 	t.Broker = pubsub.NewBroker(t.ID)
-	t.inputs = make(chan *optimusv1.LogEvent, 1)
+	t.inputs = make(chan *optimusv1.LogEvent, t.BufferSize)
 	t.Subscriber = pubsub.NewSubscriber(t.ID, t.inputs)
 	return t.Broker, t.impl.Initialize()
 }
 
-func New(id, kind string, subscriptions []string, transformer TransformerImpl) (*Transformation, error) {
+func New(id, kind string, bufferSize int, subscriptions []string, transformer TransformerImpl) (*Transformation, error) {
 	t := &Transformation{
-		ID:   id,
-		Kind: kind,
-		impl: transformer,
+		ID:         id,
+		Kind:       kind,
+		impl:       transformer,
+		BufferSize: bufferSize,
 	}
 	_, err := t.Init()
 	return t, err

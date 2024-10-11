@@ -43,12 +43,13 @@ type Destination struct {
 	impl          DestinationProcessor
 }
 
-func New(id, kind string, subscriptions []string, impl DestinationProcessor) (*Destination, error) {
+func New(id, kind string, bufferSize int, subscriptions []string, impl DestinationProcessor) (*Destination, error) {
 	d := &Destination{
 		ID:            id,
 		Kind:          kind,
 		Subscriptions: subscriptions,
 		impl:          impl,
+		BufferSize:    bufferSize,
 	}
 	return d, d.Init(id)
 }

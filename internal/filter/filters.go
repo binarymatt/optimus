@@ -37,12 +37,13 @@ type Filter struct {
 	BufferSize    int
 }
 
-func New(id, kind string, subscriptions []string, impl FilterProcessor) (*Filter, error) {
+func New(id, kind string, bufferSize int, subscriptions []string, impl FilterProcessor) (*Filter, error) {
 	f := &Filter{
 		ID:            id,
 		Kind:          kind,
 		impl:          impl,
 		Subscriptions: subscriptions,
+		BufferSize:    bufferSize,
 	}
 	err := f.Init()
 	return f, err

@@ -18,7 +18,7 @@ import (
 func TestNew(t *testing.T) {
 	mocked := mocks.NewMockTransformerImpl(t)
 	mocked.EXPECT().Initialize().Return(nil)
-	tr, err := New("test_name", "test", []string{}, mocked)
+	tr, err := New("test_name", "test", 1, []string{}, mocked)
 	must.NoError(t, err)
 	must.NotNil(t, tr.impl)
 }
@@ -27,7 +27,7 @@ func TestProcess_HappyPath(t *testing.T) {
 	mocked := mocks.NewMockTransformerImpl(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	mocked.EXPECT().Initialize().Return(nil)
-	tr, _ := New("test_name", "test", []string{}, mocked)
+	tr, _ := New("test_name", "test", 1, []string{}, mocked)
 	eg := new(errgroup.Group)
 	eg.Go(func() error {
 		return tr.Process(ctx)
