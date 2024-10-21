@@ -37,7 +37,7 @@ func TestHttpSetup_Advanced(t *testing.T) {
 	ht := &HttpDestination{
 		Endpoint: "http://example.com",
 		Retries:  2,
-		Timeout:  100,
+		Timeout:  100 * time.Millisecond,
 	}
 	err := ht.Setup()
 	must.NoError(t, err)

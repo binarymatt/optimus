@@ -7,11 +7,11 @@ import (
 	"github.com/shoenig/test/must"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/binarymatt/optimus/internal/destination"
-	"github.com/binarymatt/optimus/internal/filter"
-	"github.com/binarymatt/optimus/internal/input"
-	"github.com/binarymatt/optimus/internal/transformation"
+	"github.com/binarymatt/optimus/destination"
+	"github.com/binarymatt/optimus/filter"
+	"github.com/binarymatt/optimus/input"
 	"github.com/binarymatt/optimus/mocks"
+	"github.com/binarymatt/optimus/transformation"
 )
 
 func TestConfigInit(t *testing.T) {
