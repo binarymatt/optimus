@@ -7,6 +7,7 @@ require (
 	connectrpc.com/connect v1.16.1
 	github.com/blues/jsonata-go v1.5.4
 	github.com/bufbuild/protovalidate-go v0.6.2
+	github.com/coder/quartz v0.1.0
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/hashicorp/go-bexpr v0.1.14
 	github.com/hashicorp/go-retryablehttp v0.7.7

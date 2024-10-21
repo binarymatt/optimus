@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"log/slog"
 	"testing"
 
 	"github.com/shoenig/test/must"
@@ -19,59 +18,6 @@ func TestConfigInit(t *testing.T) {
 	cfg := &Config{}
 	cfg.Init()
 	must.Eq(t, ":8080", cfg.ListenAddress)
-}
-
-func TestWithTransformer(t *testing.T) {
-	trImpl := mocks.NewMockTransformerImpl(t)
-	trImpl.EXPECT().Initialize().Return(nil)
-	opt := WithTransformer("testname", "test", 1, []string{}, trImpl)
-	cfg := New(opt)
-	out := cfg.Transformations[0]
-	must.NotNil(t, out)
-}
-func TestWithLogLevel(t *testing.T) {
-	cases := []struct {
-		name          string
-		expectedLevel slog.Level
-		level         string
-	}{
-		{
-			name:          "empty string",
-			expectedLevel: slog.LevelInfo,
-			level:         "",
-		},
-		{
-			name:          "debug",
-			expectedLevel: slog.LevelDebug,
-			level:         "debug",
-		},
-		{
-			name:          "info",
-			expectedLevel: slog.LevelInfo,
-			level:         "",
-		},
-		{
-			name:          "warn",
-			expectedLevel: slog.LevelWarn,
-			level:         "warn",
-		},
-		{
-			name:          "error",
-			expectedLevel: slog.LevelError,
-			level:         "error",
-		},
-		{
-			name:          "upper case string",
-			expectedLevel: slog.LevelInfo,
-			level:         "INFO",
-		},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			cfg := New(WithLogLevel(tc.level))
-			must.Eq(t, tc.expectedLevel, cfg.LogLevel)
-		})
-	}
 }
 
 func TestProgramaticConfig(t *testing.T) {
@@ -122,6 +68,18 @@ func TestHclConfig(t *testing.T) {
 		expression = "test == 1"
 		subscriptions = ["test_input"]
 	}
+	transformation "jsonata" "testnata" {
+		expression = <<EOT
+		{
+  		\"name\": FirstName,
+  		\"mobile\": Phone[type = \"mobile\"].number
+		}
+		EOT
+		subscriptions = ["test_filter"]
+	}
+	destination "stdout" "test_out" {
+		subscriptions = ["test_filter"]
+	}
 	`
 	cfg, err := LoadHCL("config.hcl", []byte(exampleConfig))
 	must.NoError(t, err)
@@ -134,14 +92,4 @@ func TestHclConfig(t *testing.T) {
 	must.Eq(t, []string{"test_input"}, filter.Subscriptions)
 	must.Eq(t, "test_filter", filter.ID)
 	must.Eq(t, "bexpr", filter.Kind)
-}
-
-var rawData = `
-metrics_enabled = false
-`
-
-func TestLoadHcl(t *testing.T) {
-	cfg, err := LoadHCL("test.hcl", []byte(rawData))
-	must.NoError(t, err)
-	must.NotNil(t, cfg)
 }

@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/coder/quartz"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/mitchellh/pointerstructure"
 
@@ -25,12 +26,15 @@ type Header struct {
 	Path  string `hcl:"path"`
 }
 type HttpDestination struct {
-	client   *retryablehttp.Client
-	Timeout  int      `hcl:"timeout,optional"`
-	Retries  int      `hcl:"retries,optional"`
-	Endpoint string   `hcl:"endpoint"`
-	Method   string   `hcl:"http_method,optional"`
-	Headers  []Header `hcl:"headers,optional"`
+	client       *retryablehttp.Client
+	Timeout      time.Duration `hcl:"timeout,optional"`
+	Retries      int           `hcl:"retries,optional"`
+	Endpoint     string        `hcl:"endpoint"`
+	Method       string        `hcl:"http_method,optional"`
+	Headers      []Header      `hcl:"headers,optional"`
+	BatchSize    int           `hcl:"batch_size,optional"`
+	BatchTimeout time.Duration `hcl:"batch_timeout,optional"`
+	clock        quartz.Clock
 }
 
 func (h *HttpDestination) Setup() error {
@@ -38,12 +42,21 @@ func (h *HttpDestination) Setup() error {
 	if h.Endpoint == "" {
 		return ErrMissingEndpoint
 	}
+	if h.BatchSize < 1 {
+		h.BatchSize = 1
+	}
+
 	c := retryablehttp.NewClient()
-	c.HTTPClient.Timeout = time.Duration(h.Timeout) * time.Millisecond
+	c.HTTPClient.Timeout = h.Timeout
 	c.RetryMax = h.Retries
 
 	h.client = c
 	return nil
+}
+func (h *HttpDestination) deliver(req *retryablehttp.Request) error {
+	resp, err := h.client.Do(req)
+	slog.Debug("http delivery done", "code", resp.StatusCode)
+	return err
 }
 func (h *HttpDestination) Deliver(ctx context.Context, event *optimusv1.LogEvent) error {
 	raw, err := json.Marshal(event.Data.AsMap())
@@ -75,7 +88,7 @@ func (h *HttpDestination) AddHeaders(req *retryablehttp.Request, event *optimusv
 				val = fmt.Sprintf("%v", pval)
 			}
 		}
-		req.Header.Add(key, val)
+		req.Header.Set(key, val)
 
 	}
 }

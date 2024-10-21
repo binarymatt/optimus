@@ -15,6 +15,7 @@ import (
 )
 
 type Config struct {
+	initialized bool
 	// DataDir          string // used to store data about positions.
 	MetricsEnabled   bool
 	LogLevel         slog.Level
@@ -123,6 +124,10 @@ func (c *Config) addSubscription(ref string, subscriber pubsub.Subscriber) {
 	}
 }
 func (c *Config) Init() {
+	if c.initialized {
+		return
+	}
+
 	if c.ListenAddress == "" {
 		c.ListenAddress = ":8080"
 	}
@@ -144,6 +149,7 @@ func (c *Config) Init() {
 			c.addSubscription(name, f.Subscriber)
 		}
 	}
+	c.initialized = true
 
 }
 func New(opts ...ConfigOption) *Config {
